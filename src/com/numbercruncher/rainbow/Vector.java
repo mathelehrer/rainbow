@@ -1,7 +1,7 @@
 package com.numbercruncher.rainbow;
 
 public class Vector {
-    private double x,y,z;
+    public double x,y,z;
 
     public Vector(){
         x=y=z=0.;
@@ -46,6 +46,6 @@ public class Vector {
     }
 
     public String toString(){
-        return "Vector: " + x + " " + y + " " + z;
+        return "(" + x + "," + y + "," + z+")";
     }
 }

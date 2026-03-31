@@ -1,7 +1,7 @@
 from mathutils import Vector
 
 from objects.hitable import HitRecord
-from ray import Ray
+from old_python_scripts.ray import Ray
 
 
 class Sphere:

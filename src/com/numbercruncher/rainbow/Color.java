@@ -1,8 +1,22 @@
 package com.numbercruncher.rainbow;
 
 public class Color {
-    public float r,g,b;
-    public Color(float r,float g,float b){
+    public static final Color BLACK = new Color(0,0,0);
+    public static final Color WHITE = new Color(1,1,1);
+    public static final Color RED = new Color(1,0,0);
+    public static final Color GREEN = new Color(0,1,0);
+    public static final Color BLUE = new Color(0,0,1);
+
+
+    public double r,g,b;
+
+
+    public Color(Vector rgb){
+        this.r = rgb.x;
+        this.g = rgb.y;
+        this.b = rgb.z;
+    }
+    public Color(double r,double g,double b){
         this.r=r;
         this.g=g;
         this.b=b;

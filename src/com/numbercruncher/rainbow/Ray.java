@@ -8,10 +8,15 @@ public class Ray {
     private final Vector start;
     private final Vector direction;
 
-
+    /**
+     * Creates a ray.
+     * makes sure that the direction is normalized
+     * @param start
+     * @param direction
+     */
     public Ray(Vector start, Vector direction){
         this.start = start;
-        this. direction = direction;
+        this. direction = direction.scale(1/direction.length());
     }
 
     public Vector getStart() {
@@ -22,7 +27,11 @@ public class Ray {
         return direction;
     }
 
+    public Vector at(double t){
+        return start.add(direction.scale(t));
+    }
+
     public String toString(){
-        return "Ray: " + start + " " + direction;
+        return "Ray: from " + start + " in direction " + direction;
     }
 }

@@ -11,7 +11,7 @@ public class PPMImage {
         this.height=height;
         this.maxVal=maxVal;
 
-        this.ppm_header = "P6\n"+this.width+" "+this.height+"\n"+this.maxVal+"\n";
+        this.ppm_header = "P3\n"+"# test\n"+this.width+" "+this.height+"\n"+this.maxVal+"\n";
         this.image = new int[3*this.width*this.height];
     }
 
