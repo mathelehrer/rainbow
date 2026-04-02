@@ -13,27 +13,12 @@ public class Sphere implements SceneObject{
         this.material = material;
     }
 
-    /**
-     * Just checks the discriminant of the quadratic equation
-     *
-     * ((o-c).d)^2 -(o-c).(o-c)+r^2 >0
-     * @param ray
-     * @return
-     */
-    @Override
-    public boolean intersects(Ray ray) {
-        Vector omc = ray.getStart().sub(center);
-        Vector d = ray.getDirection();
-        double b = omc.dot(d);
-        return  b*b-omc.dot(omc) + radius*radius>0;
-    }
 
-    @Override
-    public Material getMaterial() {
-        return material;
-    }
+     @Override public Material getMaterial() {
+     return material;
+     }
 
-    /**
+     /**
      * Compute the distance from the ray's origin to the nearest intersection point
      * Compute the intersection of the sphere equation with the ray equation
      * x(t) = (o + t*d)
@@ -54,17 +39,20 @@ public class Sphere implements SceneObject{
      * @return
      */
     @Override
-    public double intersect(Ray ray) {
+    public HitRecord intersect(Ray ray) {
 
         Vector omc = ray.getStart().sub(center);
         Vector d = ray.getDirection();
         double b = omc.dot(d);
         double disc  =  b*b-omc.dot(omc) + radius*radius;
+        if (disc<0) return null;
         double t1 = -b-Math.sqrt(disc);
         double t2 = -b+Math.sqrt(disc);
-        if (t1>EPS) return t1;
-        if (t2>EPS) return t2;
-        return -1;
+        double tSelected=-1;
+        if (t1>EPS) tSelected = t1;
+        else if (t2>EPS) tSelected = t2;
+        if (tSelected>EPS) return new HitRecord(ray.at(tSelected),this.getNormal(ray.at(tSelected)),tSelected);
+        return null;
     }
 
     @Override

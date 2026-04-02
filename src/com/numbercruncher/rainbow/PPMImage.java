@@ -1,5 +1,7 @@
 package com.numbercruncher.rainbow;
 
+import static com.numbercruncher.rainbow.Utils.EPS;
+
 public class PPMImage {
     private final int width,height;
     private final  int maxVal;
@@ -13,6 +15,15 @@ public class PPMImage {
 
         this.ppm_header = "P3\n"+"# test\n"+this.width+" "+this.height+"\n"+this.maxVal+"\n";
         this.image = new int[3*this.width*this.height];
+    }
+
+    /**
+     * Gamma correction suggested by llm
+     * @param x
+     * @return
+     */
+    private static double linear_to_gamma(double x){
+        return x<=0.0031308 ? 12.92*x : 1.055*Math.pow(x,0.41666666666666663)-0.055;
     }
 
     public int getWidth(){
@@ -41,12 +52,12 @@ public class PPMImage {
 
 
     public void create_from_color(Color[] pixels,String filename){
-
+        Interval intensity = new Interval(0,1-EPS);
         for (int i = 0; i < pixels.length; i++) {
             Color pixel = pixels[i];
-            this.image[3*i] = (int)(pixel.r*maxVal);
-            this.image[3*i+1] = (int)(pixel.g*maxVal);
-            this.image[3*i+2] = (int)(pixel.b*maxVal);
+            this.image[3*i] = (int)(intensity.clamp(linear_to_gamma(pixel.r))*maxVal);
+            this.image[3*i+1] = (int)(intensity.clamp(linear_to_gamma(pixel.g))*maxVal);
+            this.image[3*i+2] = (int)(intensity.clamp(linear_to_gamma(pixel.b))*maxVal);
 
         }
 

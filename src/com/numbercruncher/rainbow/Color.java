@@ -6,6 +6,9 @@ public class Color {
     public static final Color RED = new Color(1,0,0);
     public static final Color GREEN = new Color(0,1,0);
     public static final Color BLUE = new Color(0,0,1);
+    public static final Color YELLOW = new Color(1,1,0);
+    public static final Color CYAN = new Color(0,1,1);
+    public static final Color MAGENTA = new Color(1,0,1);
 
 
     public double r,g,b;
@@ -23,6 +26,18 @@ public class Color {
     }
     public Color(){
         this(0,0,0);
+    }
+
+    public Color add(Color other){
+        return new Color(r+other.r,g+other.g,b+other.b);
+    }
+
+    public Color scale(double scalar){
+        return new Color(r*scalar,g*scalar,b*scalar);
+    }
+
+    public Color mul(Color color){
+        return new Color(r*color.r,g*color.g,b*color.b);
     }
 
     public String toString(){

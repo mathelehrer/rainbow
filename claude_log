@@ -1,0 +1,253 @@
+ Now let me fetch the CIE XYZ color matching function data.
+
+● Fetch(https://cie.co.at/datatable/cie-1931-colour-matching-functions-2-degree-
+       observer)
+  ⎿  Received 65.9KB (200 OK)
+
+● Fetch(https://files.cie.co.at/CIE_xyz_1931_2deg.csv)
+  ⎿  Received 23.5KB (200 OK)
+
+● Let me try another source for the CIE data.
+
+● Fetch(http://www.cvrl.org/database/data/cmfs/ciexyz31_1.csv)
+  ⎿  Error: timeout of 60000ms exceeded
+
+● Fetch(https://raw.githubusercontent.com/colour-science/colour/develop/colour/c
+       olorimetry/datasets/cmfs/cie_standard_observer_2_degree.csv)
+  ⎿  Error: Request failed with status code 404
+
+● Fetch(https://raw.githubusercontent.com/colour-science/colour/refs/heads/devel
+       op/colour/colorimetry/datasets/cmfs/CIE_xyz_1931_2deg.csv)
+  ⎿  Error: Request failed with status code 404
+
+● Fetch(https://www.rit.edu/cos/colorscience/rc_useful_data.php)
+  ⎿  Received 143.2KB (200 OK)
+
+● The CIE 1931 data is a well-known standard dataset. I'll create it directly
+  from the published values (5nm steps from 380-780nm, which is the standard
+  range used in spectral rendering). Let me now read the key files I need to
+  modify, then implement the changes step by step.
+
+  Let me read the current Sky and Color classes first.
+
+  Read 5 files (ctrl+o to expand)
+
+● Good, I have a full picture of the codebase. Now let me read the remaining
+  files I'll need.
+
+  Read 3 files (ctrl+o to expand)
+
+● Now I have the full picture. Let me outline the plan and implement the first
+  step: adding the CIE XYZ color matching functions and a spectral sky.
+
+  Plan for Spectral Ray Tracing Transition
+
+  The idea is to do this incrementally. Here's the roadmap:
+
+  1. Step 1 (now): Add CIE1931.java with the color matching function data, and a
+   SpectralSky.java that maps horizontal direction to wavelength across the
+  visible spectrum. Modify the Renderer to sample wavelengths and convert
+  spectral radiance to RGB via CIE XYZ.
+  2. Step 2 (later): Make materials wavelength-aware (spectral reflectance
+  instead of RGB albedo).
+  3. Step 3 (later): Full spectral path tracing with wavelength-dependent
+  effects (dispersion, etc.).
+
+  Let me implement Step 1 now. I'll create:
+  - CIE1931.java — The CIE 1931 2-degree observer color matching functions (5nm
+  steps, 380–780nm) with XYZ-to-sRGB conversion
+  - SpectralSky.java — A sky that maps horizontal angle to wavelength (rainbow
+  sky)
+  - Modifications to Renderer to do spectral rendering
+
+created CIE1931.java which holds the wavelength dasta
+create Sky.java
+add Sky as an Object to the scene
+Overwrite file
+ src/com/numbercruncher/rainbow/Renderer.java
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+  51
+  52      }
+  53
+  54 +    /**
+  55 +     * Spectral ray color: trace a ray for a single wavelength.
+  56 +     * Returns the spectral radiance (scalar) that arrives at the camera
+  57 +     * for this wavelength along this ray path.
+  58 +     *
+  59 +     * For now, only the sky emits light spectrally. Objects attenuate
+  60 +     * uniformly (grayscale) — wavelength-dependent materials come in step 2.
+  61 +     */
+  62 +    private double spectralRayRadiance(Ray ray, double lambda, int depth) {
+  63 +        HitRecord record = scene.intersect(ray, new Interval(0.0001, Double.MAX_VALUE));
+  64 +        if (record == null || record.objectIndex == -1) {
+  65 +            // Sky emission
+  66 +            Sky sky = scene.getSky();
+  67 +            if (sky instanceof SpectralSky) {
+  68 +                return ((SpectralSky) sky).getSpectralRadiance(ray, lambda);
+  69 +            }
+  70 +            // Fallback: use luminance of RGB sky color
+  71 +            Color c = sky.getColor(ray);
+  72 +            return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+  73 +        }
+  74 +        if (depth >= this.camera.maxDepth) {
+  75 +            return 0.0;
+  76 +        }
+  77 +        Material mat = scene.getObjects().get(record.objectIndex).getMaterial();
+  78 +        RayWithAttenuation scatter = mat.scatter(ray, record);
+  79 +        // Use average of attenuation RGB as wavelength-independent reflectance
+  80 +        Color att = scatter.getAttenuation();
+  81 +        double reflectance = (att.r + att.g + att.b) / 3.0;
+  82 +        return reflectance * spectralRayRadiance(
+  83 +                new Ray(record.point, scatter.getDirection()), lambda, depth + 1) * 0.5;
+  84 +    }
+  85 +
+  86      public void render(String filename){
+  87          Color[] colors = new Color[this.width*this.height];
+  88          double hm = 1./this.height;
+ ...
+  100          this.image.create_from_color(colors,filename);
+  101      }
+  102
+  103 +    /**
+  104 +     * Spectral render: for each pixel, sample random wavelengths,
+  105 +     * trace each wavelength independently, accumulate XYZ tristimulus
+  106 +     * values, then convert to sRGB.
+  107 +     *
+  108 +     * This produces physically correct color from spectral data.
+  109 +     */
+  110 +    public void renderSpectral(String filename) {
+  111 +        Color[] colors = new Color[this.width * this.height];
+  112 +        double hm = 1.0 / this.height;
+  113 +        double wm = 1.0 / this.width;
+  114 +
+  115 +        // We sample wavelengths uniformly in [380, 780].
+  116 +        // The XYZ integral is:  X = integral( L(lambda) * xBar(lambda) dlambda )
+  117 +        // Monte Carlo estimate: X ≈ (lambdaRange / N) * sum( L(lambda_i) * xBar(lambda_i) )
+  118 +        double lambdaRange = CIE1931.LAMBDA_MAX - CIE1931.LAMBDA_MIN;
+  119 +
+  120 +        for (int y = 0; y < this.height; y++) {
+  121 +            if (y % 50 == 0) {
+  122 +                System.out.println("Spectral render: row " + y + "/" + this.height);
+  123 +            }
+  124 +            for (int x = 0; x < this.width; x++) {
+  125 +                double X = 0, Y = 0, Z = 0;
+  126 +                int totalSamples = camera.samplesPerPixel;
+  127 +
+  128 +                for (int sample = 0; sample < totalSamples; sample++) {
+  129 +                    Ray ray = this.camera.getRay(x * wm, y * hm, wm, hm);
+  130 +                    // Pick a random wavelength
+  131 +                    double lambda = CIE1931.LAMBDA_MIN + Math.random() * lambdaRange;
+  132 +                    double L = spectralRayRadiance(ray, lambda, 0);
+  133 +
+  134 +                    // Accumulate XYZ weighted by color matching functions
+  135 +                    X += L * CIE1931.xBar(lambda);
+  136 +                    Y += L * CIE1931.yBar(lambda);
+  137 +                    Z += L * CIE1931.zBar(lambda);
+  138 +                }
+  139 +
+  140 +                // Monte Carlo normalization: (lambdaRange / totalSamples)
+  141 +                double norm = lambdaRange / totalSamples;
+  142 +                X *= norm;
+  143 +                Y *= norm;
+  144 +                Z *= norm;
+  145 +
+  146 +                // Convert XYZ to linear sRGB
+  147 +                Color rgb = CIE1931.xyzToLinearRGB(X, Y, Z);
+  148 +
+  149 +                // Clamp negative values (out of gamut)
+  150 +                colors[y * width + x] = new Color(
+  151 +                        Math.max(0, rgb.r),
+  152 +                        Math.max(0, rgb.g),
+  153 +                        Math.max(0, rgb.b)
+  154 +                );
+  155 +            }
+  156 +        }
+  157 +
+  158 +        this.image.create_from_color(colors, filename);
+  159 +    }
+  160 +
+  161      public void renderTestScene(){
+  162          Color[] colors = new Color[this.width*this.height];
+  163          double hm = 1./this.height;
+
+● Here's a summary of what was created and changed:
+
+  New files
+
+  1. CIE1931.java — The CIE 1931 2-degree standard observer color matching functions (5nm steps,
+  380–780nm). Provides:
+    - xBar(λ), yBar(λ), zBar(λ) with linear interpolation
+    - xyzToLinearRGB() using the standard sRGB D65 matrix
+    - wavelengthToColor(λ) — full pipeline from wavelength to linear RGB
+  2. SpectralSky.java — A sky that maps horizontal ray direction to wavelength:
+    - Left edge (x = -1) → 380nm (violet), right edge (x = +1) → 780nm (red)
+    - getSpectralRadiance(ray, λ) — returns a Gaussian-peaked spectral radiance centered on the sky's
+  wavelength at that direction (σ = 10nm for vivid but smooth color bands)
+    - getColor(ray) — RGB fallback for non-spectral rendering
+
+  Modified files
+
+  3. Scene.java — Added Scene(Sky sky) constructor and SPECTRAL_SKY_SCENE static scene (empty scene with
+  SpectralSky)
+  4. Renderer.java — Added spectral rendering:
+    - spectralRayRadiance(ray, λ, depth) — traces a single ray for a single wavelength, returning scalar
+  radiance
+    - renderSpectral(filename) — for each pixel, samples random wavelengths uniformly in [380, 780],
+  traces each, accumulates XYZ tristimulus values via Monte Carlo integration, then converts to sRGB
+  5. RendererTest.java — Added renderSpectralSky() test
+
+  How it works
+
+  For each pixel sample:
+  1. Pick a random wavelength λ uniformly in [380, 780]nm
+  2. Trace the ray → get spectral radiance L(λ) from the sky
+  3. Accumulate: X += L(λ) · x̄(λ), Y += L(λ) · ȳ(λ), Z += L(λ) · z̄(λ)
+  4. After all samples, normalize by (λ_range / N) (Monte Carlo estimator)
+  5. Convert XYZ → linear sRGB → gamma-corrected PPM
+
+  You can run the renderSpectralSky test to generate spectral_sky.ppm — it should show the full visible
+  spectrum sweeping horizontally from violet on the left to red on the right.
+
+  Next steps (when you're ready)
+
+  - Step 2: Make materials wavelength-aware (spectral reflectance instead of flat RGB)
+  - Step 3: Add wavelength-dependent refraction (dispersion through prisms/glass spheres → actual
+  rainbows)
+
+
+● Here's what was changed:
+
+  - Material.java — Added emission field (default 0.0) and getEmission() method
+  - MaterialLambertian.java — Added constructor MaterialLambertian(Color albedo, double emission)
+  - Renderer.java — spectralRayRadiance now computes L = emission + albedo * L_incoming at each hit
+  - Scene.java — Added LIGHT_OVEN scene: a large sphere (r=100) centered at origin enclosing the camera,
+   plus a small sphere (r=0.5) in front of the camera. Both have albedo=0.5 and emission=0.5.
+  - RendererTest.java — lightOven() test renders the scene spectrally
+
+  Since both surfaces emit and reflect equally, light bounces around the oven gaining energy from
+  emission at each bounce until it converges. The result should be a uniformly lit gray scene with the
+  small sphere visible as a slightly different shade due to the viewing geometry.
+
+
+
+● The current scatter doesn't take a wavelength, but glass needs it for dispersion. I'll add a wavelength-aware scatter overload to
+  Material with a default fallback, then create MaterialGlass with Cauchy dispersion and Snell's law + Schlick's approximation. I also
+  need to update the renderer to pass wavelength through.
+
+  MaterialGlass.java — Dielectric with Cauchy dispersion:
+  - Cauchy's equation: n(λ) = B + C/λ² (λ in μm). Default is BK7 crown glass (B=1.5046, C=0.00420), giving n≈1.534 at 380nm (violet)
+  down to n≈1.512 at 780nm (red)
+  - Snell's law for refraction, with total internal reflection detection
+  - Schlick's approximation for Fresnel reflectance (probabilistic reflect vs refract)
+  - Wavelength-aware: overrides scatter(ray, hit, lambda) — the spectral renderer passes the wavelength through, so each wavelength
+  bends at a different angle
+
+  Material.java — Added scatter(ray, hit, lambda) with default fallback to the wavelength-independent version
+
+  Renderer.java — spectralRayRadiance now calls the wavelength-aware scatter
+
+  You can use it in a scene like:
+  new Sphere(1, new Vector(0, 2, 0), new MaterialGlass())
+  or with custom dispersion:
+  new MaterialGlass(1.7, 0.01)  // flint glass, stronger dispersion
+
