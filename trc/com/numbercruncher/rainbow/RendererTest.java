@@ -33,7 +33,7 @@ class RendererTest {
 
     @Test
     void lightOven(){
-        Renderer renderer = new Renderer(Scene.LIGHT_OVEN,10);
+        Renderer renderer = new Renderer(Scene.LIGHT_OVEN,4);
         renderer.render("test_image_light_oven");
     }
 
@@ -52,11 +52,22 @@ class RendererTest {
     @Test
     void renderPrismSunny(){
         // Same camera, sunny sky — white sunlight through glass shows dispersion.
-        Camera camera = new Camera(16./9, 2, 2.0,
+        Camera camera = new Camera(16./9, 2, 0.75,
+                new Vector(0, -4, -0.5),//ray origin
+                new Vector(0, 1, 0),//lookAt
+                new Vector(0, 0, 1));//world up
+        Renderer renderer = new Renderer(Scene.PRISM_SUNNY, camera, 40);
+        renderer.render("test_image_prism_sunny");
+    }
+
+    @Test
+    void renderPrismSunny_two(){
+        // Same camera, sunny sky — white sunlight through glass shows dispersion.
+        Camera camera = new Camera(16./9, 2, 0.75,
                 new Vector(0, -4, 0),//ray origin
                 new Vector(0, 1, 0),//lookAt
                 new Vector(0, 0, 1));//world up
-        Renderer renderer = new Renderer(Scene.PRISM_SUNNY, camera, 5);
-        renderer.render("test_image_prism_sunny");
+        Renderer renderer = new Renderer(Scene.PRISM_SUNNY_TWO, camera, 5);
+        renderer.render("test_image_prism_sunny_two");
     }
 }

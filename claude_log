@@ -301,3 +301,59 @@ Changes:
 
   The Renderer now combines: L = local_radiance + throughput * L_recursive,
   where local_radiance includes both emission and direct light.
+
+  1. Scene.java — LIGHT_OVEN now uses Lambertian(OVEN_GRAY, 0.5, 0.5) (3-arg
+  constructor) to actually set emission=0.5. The 2-arg constructor defaulted
+  emission to 0, so there was no light source.
+  2. Sphere.java — Reverted the normal flip. Sphere always returns the geometric
+   outward normal, which is what Glass expects for its own inside/outside
+  detection.
+  3. Lambertian.java + Default.java — Both diffuse materials now flip the normal
+   when the ray hits from the back side (ray.dot(normal) > 0). This keeps rays
+  bouncing inside enclosed geometries like the light oven, without breaking
+  Glass refraction.
+
+Raindrops
+
+How it works
+
+  A BVH is a binary tree of axis-aligned bounding boxes (AABBs). Each leaf holds
+   one (or a few) objects. Each internal node's box encloses all its children.
+  Ray traversal skips entire subtrees when the ray misses a node's box → O(log
+  N) instead of O(N) per ray.
+
+  What you'd need to add
+
+  1. AABB class — axis-aligned bounding box with a fast ray-box intersection
+  test (slab method)
+  2. BVHNode implementing SceneObject — each node holds an AABB and either two
+  children or a leaf object
+  3. SceneObject.getBounds() — each object returns its AABB (trivial for
+  spheres: center ± radius)
+  4. Build step — sort objects along the longest axis, split in half, recurse
+
+  New files:
+  - AABB.java — Axis-aligned bounding box with slab-method ray intersection test
+   and fromPoints() factory for easy construction
+  - BVHNode.java — Binary tree with build (sort by longest axis, split in half)
+  and intersect (skip subtrees when ray misses box)
+
+  Modified files:
+  - SceneObject.java — Added getBounds() to the interface
+  - Sphere.java — getBounds() returns center ± radius
+  - Plane.java — getBounds() returns null (infinite, tested linearly)
+  - Prism.java — Computes AABB from 6 prism vertices during construction
+  - Cube.java — Computes AABB from 8 corners during construction
+  - Sky.java — getBounds() returns null
+  - Scene.java — Builds BVH lazily on first intersect() call. Bounded objects go
+   through the BVH (O(log N)), unbounded objects (planes) are tested linearly
+
+  With 10,000 rain drops, intersection testing goes from 10,000 tests per ray to
+   ~14 (log2 10,000). To create a rain scene, you'd add spheres like:
+
+  Scene rain = new Scene(new SkySunny())
+      .addObject(new Plane(...));
+  for (int i = 0; i < 10000; i++) {
+      Vector pos = randomPositionInVolume();
+      scene.addObject(new Sphere(0.002, pos, new Glass(1.33, 0.006)));
+  }

@@ -28,6 +28,7 @@ public class Prism implements SceneObject {
     // Each plane is defined by: normal.dot(point) <= offset  (inside)
     private final Vector[] normals;
     private final double[] offsets;
+    private final AABB bounds;
 
     /**
      * @param center     center of the prism in world space
@@ -84,6 +85,13 @@ public class Prism implements SceneObject {
 
         normals[4] = capDir;
         offsets[4] = normals[4].dot(center.add(capDir.scale(halfHeight)));
+
+        // Compute AABB from the 6 prism vertices
+        Vector capOffset = capDir.scale(halfHeight);
+        this.bounds = AABB.fromPoints(
+                v0.add(capOffset), v0.sub(capOffset),
+                v1.add(capOffset), v1.sub(capOffset),
+                v2.add(capOffset), v2.sub(capOffset));
     }
 
     /**
@@ -155,23 +163,12 @@ public class Prism implements SceneObject {
         return null;
     }
 
-    @Override
-    public Vector getNormal(Vector point) {
-        // Find closest face
-        double minDist = Double.MAX_VALUE;
-        int closest = 0;
-        for (int i = 0; i < 5; i++) {
-            double dist = Math.abs(normals[i].dot(point) - offsets[i]);
-            if (dist < minDist) {
-                minDist = dist;
-                closest = i;
-            }
-        }
-        return normals[closest];
-    }
 
     @Override
     public Material getMaterial() {
         return material;
     }
+
+    @Override
+    public AABB getBounds() { return bounds; }
 }

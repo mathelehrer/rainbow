@@ -28,6 +28,7 @@ public class Cube implements SceneObject {
     // Each plane is defined by: normal.dot(point) <= offset  (inside)
 
     private final Face[] faces;
+    private final AABB bounds;
 
     /**
      * @param center     center of the prism in world space
@@ -52,16 +53,13 @@ public class Cube implements SceneObject {
         //shift cube center to origin to perform rotation
         Vector shift = new Vector(1, 1, 1).scale(0.5 * sideLength);
         for (int i = 0; i < corners.length; i++) {
-            corners[i]=corners[i].sub(shift);
+            corners[i] = corners[i].sub(shift);
         }
 
-        //rotate
-        Matrix rotz= new RotationMatrix(rotation);
-        for(int i=0;i<corners.length;i++)
-            corners[i] = corners[i].add(shift);
-
+        //rotate around origin
+        Matrix rot = new RotationMatrix(rotation);
         for (int i = 0; i < corners.length; i++) {
-            corners[i] = rotz.map(corners[i]);
+            corners[i] = rot.map(corners[i]);
         }
 
         // Shift to world position
@@ -69,6 +67,8 @@ public class Cube implements SceneObject {
             corners[i] = corners[i].add(center);
         }
 
+
+        this.bounds = AABB.fromPoints(corners);
 
         faces = new Face[6];
         faces[0] = new Face(corners,new int[]{0,3,2,1});
@@ -91,7 +91,7 @@ public class Cube implements SceneObject {
         //find possible intersection with all faces
         //recycle the stuff from the plane
         double tMin = Double.MAX_VALUE;
-        int hittenFace = -1;
+        int hitFace = -1;
         Vector hitPoint = null;
 
         for (int i=0;i<faces.length;i++){
@@ -109,29 +109,23 @@ public class Cube implements SceneObject {
                 Vector p = ray.at(t);
                 if (face.contains(p)) {
                     tMin = t;
-                    hittenFace = i;
+                    hitFace = i;
                     hitPoint = p;
                 }
             }
         }
 
         if (hitPoint == null) return null;
-        Vector normal = faces[hittenFace].getNormal();
+        Vector normal = faces[hitFace].getNormal();
         return new HitRecord(hitPoint, normal, tMin);
     }
 
-    @Override
-    public Vector getNormal(Vector point) {
-        for (Face face : faces) {
-            if (face.contains(point)) {
-                return face.getNormal();
-            }
-        }
-        return null;
-    }
 
     @Override
     public Material getMaterial() {
         return material;
     }
+
+    @Override
+    public AABB getBounds() { return bounds; }
 }

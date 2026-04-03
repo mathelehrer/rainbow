@@ -2,7 +2,6 @@ package com.numbercruncher.rainbow;
 
 import com.numbercruncher.rainbow.materials.Material;
 import com.numbercruncher.rainbow.ray_tools.HitRecord;
-import com.numbercruncher.rainbow.ray_tools.Radiance;
 import com.numbercruncher.rainbow.ray_tools.Ray;
 import com.numbercruncher.rainbow.ray_tools.RaySpectral;
 
@@ -60,23 +59,20 @@ public class Renderer {
      * Returns the spectral radiance (scalar) that arrives at the camera
      * for this wavelength along this ray path.
      */
-    private Radiance rayRadiance(Ray ray, double lambda, int depth) {
+    private double rayRadiance(Ray ray, double lambda, int depth) {
         HitRecord record = scene.intersect(ray, new Interval(0.0001, Double.MAX_VALUE));
         if (record == null || record.objectIndex == -1) {
             return scene.getSky().getSpectralRadiance(ray, lambda);
         }
-        if (depth >= this.camera.maxDepth) {
-            return Radiance.ZERO;
+        if (depth >= Camera.maxDepth) {
+            return 0.0;
         }
         Material mat = scene.getObjects().get(record.objectIndex).getMaterial();
         RaySpectral scatter = mat.scatter(ray, record, lambda, scene);
-        // Local radiance: emission + direct light (computed by the material)
         double local = scatter.getRadiance();
-        // Indirect radiance: throughput * recursive bounce
-        Radiance reflectance = new Radiance(scatter.getThroughput());
-        Radiance reflected = reflectance.combine(rayRadiance(
-                new Ray(record.point, scatter.getDirection()), lambda, depth + 1));
-        return new Radiance(local + reflected.value);
+        double reflected = scatter.getThroughput() * rayRadiance(
+                new Ray(record.point, scatter.getDirection()), lambda, depth + 1);
+        return local + reflected;
     }
 
     /**
@@ -88,8 +84,8 @@ public class Renderer {
      */
     public void render(String filename) {
         Color[] colors = new Color[this.width * this.height];
-        double hm = 1.0 / this.height;
-        double wm = 1.0 / this.width;
+        double pixelHeight = 1.0 / this.height;
+        double pixelWidth = 1.0 / this.width;
 
         // We sample wavelengths uniformly in [380, 780].
         // The XYZ integral is:  X = integral( L(lambda) * xBar(lambda) dlambda )
@@ -104,12 +100,9 @@ public class Renderer {
                 int totalSamples = camera.samplesPerPixel;
 
                 for (int sample = 0; sample < totalSamples; sample++) {
-                    Ray ray = this.camera.getRay(x * wm, y * hm, wm, hm);
-                    // Pick a random wavelength
+                    Ray ray = this.camera.getRay(x,y, pixelWidth, pixelHeight);
                     double lambda = CIE1931.LAMBDA_MIN + rng.nextDouble() * lambdaRange;
-                    Radiance l = rayRadiance(ray, lambda, 0);
-                    double nl = l.value / RADIANCE_NORMALIZATION;
-                    // Accumulate XYZ weighted by color matching functions
+                    double nl = rayRadiance(ray, lambda, 0) / RADIANCE_NORMALIZATION;
                     X += nl * CIE1931.xBar(lambda);
                     Y += nl * CIE1931.yBar(lambda);
                     Z += nl * CIE1931.zBar(lambda);
@@ -138,14 +131,19 @@ public class Renderer {
         this.image.create_from_color(colors, filename);
     }
 
+
+    /**
+     * unphysical test scene
+     *
+     */
     public void renderTestScene(){
         Color[] colors = new Color[this.width*this.height];
-        double hm = 1./this.height;
-        double wm = 1./this.width;
+        double pixelHeight = 1./this.height;
+        double pixelWidth = 1./this.width;
         for (int y = 0; y< this.height; y++) {
             for (int x = 0; x < this.width; x++) {
-                Ray ray = this.camera.getRay(x*wm,y*hm,wm,hm);
-                colors[y*width+x]=new Color( (float) (y * hm), (float) (x * wm),(float) (1.-0.5*y*hm-0.5*x*wm));
+                Ray ray = this.camera.getRay(x,y,pixelWidth,pixelHeight);
+                colors[y*width+x]=new Color( (float) (y * pixelHeight), (float) (x * pixelWidth),(float) (1.-0.5*y*pixelHeight-0.5*x*pixelWidth));
             }
 
         }

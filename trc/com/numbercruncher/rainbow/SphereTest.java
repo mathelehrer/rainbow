@@ -22,12 +22,5 @@ class SphereTest {
             else
                 assertEquals(-1,s.intersect(r));
         }
-
-
-    }
-
-    @Test
-    void intersect() {
-
     }
 }

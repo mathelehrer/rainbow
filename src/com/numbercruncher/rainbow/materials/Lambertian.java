@@ -2,7 +2,6 @@ package com.numbercruncher.rainbow.materials;
 
 import com.numbercruncher.rainbow.*;
 import com.numbercruncher.rainbow.ray_tools.HitRecord;
-import com.numbercruncher.rainbow.ray_tools.Radiance;
 import com.numbercruncher.rainbow.ray_tools.Ray;
 import com.numbercruncher.rainbow.ray_tools.RaySpectral;
 import com.numbercruncher.rainbow.sky.SkySunny;
@@ -31,12 +30,15 @@ public class Lambertian extends Material {
 
     @Override
     public RaySpectral scatter(Ray ray, HitRecord hitRecord, double lambda, Scene scene){
-        Vector scatterDirection = Vector.lambertianReflection(hitRecord.normal);
+        // Flip normal to face the incoming ray (handles inside-of-sphere hits)
+        Vector normal = hitRecord.normal;
+        if (ray.getDirection().dot(normal) > 0) normal = normal.neg();
 
-        // 1. Reflectance contribution (indirect light via recursive bounce)
-        //    cos(θ) factor darkens grazing angles → more pronounced shadows
-        double cosTheta = Math.max(0, scatterDirection.dot(hitRecord.normal));
-        double reflectance = color.spectralReflectance(lambda) * cosTheta * albedo;
+        Vector scatterDirection = Vector.lambertianReflection(normal);
+
+        // Reflectance contribution (indirect light via recursive bounce)
+        // cos(θ) is already accounted for by the cosine-weighted sampling in lambertianReflection()
+        double reflectance = color.spectralReflectance(lambda) * albedo;
 
         // 2. Emission contribution (self-emitted radiance)
         double emittedRadiance = getEmission();
@@ -60,9 +62,9 @@ public class Lambertian extends Material {
                     // The solid angle of the sun cone is 2π(1 - cos(θ_sun))
                     double sunAngularRadius = Math.toRadians(SUN_ANGLE);
                     double sunSolidAngle = 2.0 * Math.PI * (1.0 - Math.cos(sunAngularRadius));
-                    Radiance sunRadiance = sun.getSpectralRadiance(shadowRay, lambda);
+                    double sunRadiance = sun.getSpectralRadiance(shadowRay, lambda);
                     double brdf = color.spectralReflectance(lambda) * albedo / Math.PI;
-                    directRadiance = brdf * cosSun * sunRadiance.value;
+                    directRadiance = brdf * cosSun * sunRadiance;
                 }
             }
         }

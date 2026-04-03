@@ -1,8 +1,5 @@
 package com.numbercruncher.rainbow;
-
-
 import com.numbercruncher.rainbow.ray_tools.Ray;
-
 import static java.util.concurrent.ThreadLocalRandom.current;
 
 public class Camera {
@@ -62,18 +59,39 @@ public class Camera {
                 .sub(viewportV.scale(0.5));
     }
 
-    public Ray getRay(double u, double v, double du, double dv){
+    public Ray getRay(int x, int y, double du, double dv){
         //random fluctuation for antialiasing
-        u+=1*(-0.5+ current().nextDouble())*du;
-        v+=1*(-0.5+ current().nextDouble())*dv;
+
+        double [] uv;
+//        uv = new double[]{x*du,y*dv};
+//        getFlatRandomSample(uv,du,dv);
+
+        uv = new double[]{(x+0.5)*du,(y+0.5)*dv};
+        getLinearRandomSample(uv,du,dv);
 
         return new Ray(origin,
-                this.lowerLeftCorner.add(this.viewportU.scale(u)).add(this.viewportV.scale(v)).sub(origin));
+                this.lowerLeftCorner.add(this.viewportU.scale(uv[0])).add(this.viewportV.scale(uv[1])).sub(origin));
     }
 
-    public Color getRayColor(Ray ray){
-        return new Color(0,0,0);
+    /**
+     * this is a very simplistic approach, where the sample is uniformly distributed in the unit square.
+     * @param uv
+     * @param du
+     * @param dv
+     */
+    private void getFlatRandomSample(double [] uv, double du, double dv){
+        uv[0]+=1*(-0.5+ current().nextDouble())*du;
+        uv[1]+=1*(-0.5+ current().nextDouble())*dv;
     }
+
+    /**
+     * this is a more sophisticated approach, where the sample probability drops linearly to the edge of the pixel
+     *
+     */
+    public void getLinearRandomSample(double[] uv, double du, double dv){
+
+    }
+
 
 
 }

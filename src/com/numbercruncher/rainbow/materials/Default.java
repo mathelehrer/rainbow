@@ -12,7 +12,9 @@ public class Default extends Material {
 
     @Override
     public RaySpectral scatter(Ray incident, HitRecord hitRecord, double lambda, Scene scene){
-        Vector scatteredDirection = Vector.lambertianReflection(hitRecord.normal);
+        Vector normal = hitRecord.normal;
+        if (incident.getDirection().dot(normal) > 0) normal = normal.neg();
+        Vector scatteredDirection = Vector.lambertianReflection(normal);
         double reflectance = color.spectralReflectance(lambda);
         return new RaySpectral(hitRecord.point, scatteredDirection, lambda, reflectance);
     }

@@ -8,14 +8,17 @@ import com.numbercruncher.rainbow.ray_tools.Ray;
 public class Sphere implements SceneObject {
     private final double radius;
     private final Vector center;
-
     private final Material material;
+    private final AABB bounds;
     private final double EPS=1e-8;
 
     public Sphere(double radius,Vector center, Material material){
         this.radius=radius;
         this.center=center;
         this.material = material;
+        this.bounds = new AABB(
+                new Vector(center.x - radius, center.y - radius, center.z - radius),
+                new Vector(center.x + radius, center.y + radius, center.z + radius));
     }
 
 
@@ -56,12 +59,13 @@ public class Sphere implements SceneObject {
         double tSelected=-1;
         if (t1>EPS) tSelected = t1;
         else if (t2>EPS) tSelected = t2;
-        if (tSelected>EPS) return new HitRecord(ray.at(tSelected),this.getNormal(ray.at(tSelected)),tSelected);
+        if (tSelected>EPS) {
+            Vector point = ray.at(tSelected);
+            return new HitRecord(point, point.sub(center).normalize(), tSelected);
+        }
         return null;
     }
 
     @Override
-    public Vector getNormal(Vector point) {
-        return point.sub(center).normalize();
-    }
+    public AABB getBounds() { return bounds; }
 }

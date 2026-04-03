@@ -16,7 +16,7 @@ public class CIE1931 {
     public static final double LAMBDA_MAX = 780.0;
     public static final double LAMBDA_STEP = 5.0;
 
-    public static final double RADIANCE_NORMALIZATION = 80.;//106.86555;
+    public static final double RADIANCE_NORMALIZATION = 80;//106.86555;
 
     // CIE 1931 2-degree observer, 5nm steps, 380-780nm
     // Source: CIE 015:2004 (official standard)

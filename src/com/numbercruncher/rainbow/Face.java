@@ -4,17 +4,10 @@ import static com.numbercruncher.rainbow.Utils.EPS;
 
 public class Face {
 
-/*****************************
- **** Attribute **************
- *****************************/
 private Vector[] corners;
 private int[] indices;
 private Vector normal;
 private Vector center;
-
-/*****************************
- **** Konstruktor*************
- *****************************/
 
 public Face(Vector[] corners, int[] indices){
     this.corners = corners;
@@ -23,17 +16,6 @@ public Face(Vector[] corners, int[] indices){
     this.center = compute_center();
 }
 
-/*****************************
- **** Getter    **************
- *****************************/
-
-/*****************************
- **** Setter    **************
- *****************************/
-
-/*****************************
- **** public methods *********
- *****************************/
     /**
      * Warning: This only works for squares so far
      * @param p
@@ -55,9 +37,6 @@ public Face(Vector[] corners, int[] indices){
     return false;
 }
 
-/*****************************
- **** private methods  *******
- *****************************/
 private Vector compute_normal(){
     Vector u = corners[indices[1]].sub(corners[indices[0]]);
     Vector v = corners[indices[2]].sub(corners[indices[0]]);
@@ -84,9 +63,6 @@ private Vector compute_normal(){
         return center;
     }
 
-/*****************************
- **** overrides     **********
- *****************************/
 @Override
     public String toString() {
     String cornerString = "";

@@ -5,7 +5,8 @@ import com.numbercruncher.rainbow.ray_tools.HitRecord;
 import com.numbercruncher.rainbow.ray_tools.Ray;
 
 public interface SceneObject {
-    public HitRecord intersect(Ray ray);
-    public Vector getNormal(Vector point);
-    public Material getMaterial();
+    HitRecord intersect(Ray ray);
+    Material getMaterial();
+    /** Returns the axis-aligned bounding box, or null for unbounded objects (e.g. Plane). */
+    AABB getBounds();
 }

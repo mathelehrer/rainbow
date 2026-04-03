@@ -39,14 +39,12 @@ public class Plane implements SceneObject {
         else return null;
     }
 
-    @Override
-    public Vector getNormal(Vector point) {
-        return this.normal;
-    }
 
     @Override
     public Material getMaterial() {
         return material;
     }
 
+    @Override
+    public AABB getBounds() { return null; }
 }

@@ -1,7 +1,6 @@
 package com.numbercruncher.rainbow.sky;
 
 import com.numbercruncher.rainbow.Color;
-import com.numbercruncher.rainbow.ray_tools.Radiance;
 import com.numbercruncher.rainbow.ray_tools.Ray;
 import com.numbercruncher.rainbow.Vector;
 
@@ -43,8 +42,7 @@ public class SkyChecker extends Sky {
      * Spectral radiance: white tiles emit 1.0, black tiles emit 0.0
      * (flat across all wavelengths).
      */
-    public Radiance getSpectralRadiance(Ray ray, double lambda) {
-        Color c = getColor(ray);
-        return new Radiance(c.r); // 0 or 1
+    public double getSpectralRadiance(Ray ray, double lambda) {
+        return getColor(ray).r; // 0 or 1
     }
 }

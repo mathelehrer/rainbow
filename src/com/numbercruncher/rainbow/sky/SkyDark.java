@@ -1,7 +1,7 @@
 package com.numbercruncher.rainbow.sky;
 
 import com.numbercruncher.rainbow.Color;
-import com.numbercruncher.rainbow.ray_tools.Radiance;
+import com.numbercruncher.rainbow.Utils;
 import com.numbercruncher.rainbow.ray_tools.Ray;
 import com.numbercruncher.rainbow.Vector;
 
@@ -30,26 +30,14 @@ public class SkyDark extends Sky {
         this.sunTemperature = temperature;
     }
 
-    /**
-     * Planck blackbody, normalized so peak ≈ 1.
-     */
-    private static double planck(double lambdaNm, double T) {
-        double lambdaM = lambdaNm * 1e-9;
-        double c1 = 3.7418e-16;
-        double c2 = 1.4388e-2;
-        double radiance = c1 / (Math.pow(lambdaM, 5) * (Math.exp(c2 / (lambdaM * T)) - 1.0));
-        return radiance / 2.634e13;
-    }
-
-    public Radiance getSpectralRadiance(Ray ray, double lambda) {
+    public double getSpectralRadiance(Ray ray, double lambda) {
         double cosAngle = ray.getDirection().dot(sunDirection);
         double angle = Math.acos(Math.min(1.0, Math.max(-1.0, cosAngle)));
 
         if (angle < sunAngularRadius) {
-            return new Radiance(sunIntensity * planck(lambda, sunTemperature));
+            return sunIntensity * Utils.planck(lambda, sunTemperature);
         }
-        // Everything else is black
-        return Radiance.ZERO;
+        return 0.0;
     }
 
     @Override

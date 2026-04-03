@@ -1,7 +1,6 @@
 package com.numbercruncher.rainbow.sky;
 
 import com.numbercruncher.rainbow.*;
-import com.numbercruncher.rainbow.ray_tools.Radiance;
 import com.numbercruncher.rainbow.ray_tools.Ray;
 
 /**
@@ -54,14 +53,14 @@ public class SkySpectral extends Sky {
      * @param lambda the wavelength being traced (nm)
      * @return spectral radiance (scalar, dimensionless for now)
      */
-    public Radiance getSpectralRadiance(Ray ray, double lambda) {
+    public double getSpectralRadiance(Ray ray, double lambda) {
         double skyLambda = directionToWavelength(ray);
         // Gaussian bandwidth controls how "pure" each color band is.
         // sigma=10nm -> nearly monochromatic, sharp gamut-clipping edges
         // sigma=30nm -> smooth blending between neighboring hues
         double sigma = 50.0;
         double diff = lambda - skyLambda;
-        return new Radiance(Math.exp(-0.5 * diff * diff / (sigma * sigma)));
+        return Math.exp(-0.5 * diff * diff / (sigma * sigma));
     }
 
     /**
