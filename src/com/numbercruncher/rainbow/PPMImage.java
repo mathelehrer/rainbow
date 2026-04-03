@@ -51,33 +51,54 @@ public class PPMImage {
     }
 
 
+    private int toPixelValue(double linear) {
+        if (Double.isNaN(linear) || Double.isInfinite(linear)) linear = 0.0;
+        double gamma = linear_to_gamma(Math.max(0, linear));
+        return (int)(Math.min(gamma, 1.0 - EPS) * maxVal);
+    }
+
     public void create_from_color(Color[] pixels,String filename){
-        Interval intensity = new Interval(0,1-EPS);
         for (int i = 0; i < pixels.length; i++) {
             Color pixel = pixels[i];
-            this.image[3*i] = (int)(intensity.clamp(linear_to_gamma(pixel.r))*maxVal);
-            this.image[3*i+1] = (int)(intensity.clamp(linear_to_gamma(pixel.g))*maxVal);
-            this.image[3*i+2] = (int)(intensity.clamp(linear_to_gamma(pixel.b))*maxVal);
-
+            this.image[3*i]   = toPixelValue(pixel.r);
+            this.image[3*i+1] = toPixelValue(pixel.g);
+            this.image[3*i+2] = toPixelValue(pixel.b);
         }
 
         save(filename);
     }
 
     /**
-     * export imate to ppm file
+     * Export image as P3 (ASCII) PPM file.
      */
     public void save(String filename){
-        filename = filename+".ppm";
+        String path = filename+".ppm";
         try{
-            java.io.FileWriter writer = new java.io.FileWriter(filename);
-            writer.write(ppm_header);
-            for(int i = 0; i < image.length; i++){
-                writer.write(image[i]+" ");
+            java.io.BufferedWriter writer = new java.io.BufferedWriter(new java.io.FileWriter(path));
+            writer.write("P3\n" + this.width + " " + this.height + "\n" + this.maxVal + "\n");
+            for(int i = 0; i < image.length; i += 3){
+                writer.write(image[i] + " " + image[i+1] + " " + image[i+2]);
+                writer.newLine();
             }
             writer.close();
         }catch(java.io.IOException e){
-            System.out.println("Error writing file: " + e.getMessage());
+            System.out.println("Error writing P3 file: " + e.getMessage());
+        }
+
+        // Also save as P6 (binary) — smaller and more widely supported
+        String pathBin = filename + "_bin.ppm";
+        try {
+            java.io.FileOutputStream fos = new java.io.FileOutputStream(pathBin);
+            String header = "P6\n" + this.width + " " + this.height + "\n" + this.maxVal + "\n";
+            fos.write(header.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+            byte[] bytes = new byte[image.length];
+            for (int i = 0; i < image.length; i++) {
+                bytes[i] = (byte) image[i];
+            }
+            fos.write(bytes);
+            fos.close();
+        } catch (java.io.IOException e) {
+            System.out.println("Error writing P6 file: " + e.getMessage());
         }
     }
 }

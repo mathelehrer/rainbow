@@ -1,4 +1,4 @@
-package com.numbercruncher.rainbow;
+package com.numbercruncher.rainbow.ray_tools;
 
 public class Radiance {
     public static final Radiance ZERO = new Radiance(0);

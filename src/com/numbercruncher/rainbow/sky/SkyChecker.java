@@ -1,4 +1,9 @@
-package com.numbercruncher.rainbow;
+package com.numbercruncher.rainbow.sky;
+
+import com.numbercruncher.rainbow.Color;
+import com.numbercruncher.rainbow.ray_tools.Radiance;
+import com.numbercruncher.rainbow.ray_tools.Ray;
+import com.numbercruncher.rainbow.Vector;
 
 /**
  * A sky with a black and white checkerboard pattern.
@@ -6,15 +11,15 @@ package com.numbercruncher.rainbow;
  * so tiles have equal world-space size and appear smaller toward the edges,
  * giving the appearance of an infinite grid.
  */
-public class CheckerSky extends Sky {
+public class SkyChecker extends Sky {
 
     private final double tileSize; // world-space size of each checker tile
 
-    public CheckerSky() {
+    public SkyChecker() {
         this(0.5);
     }
 
-    public CheckerSky(double tileSize) {
+    public SkyChecker(double tileSize) {
         this.tileSize = tileSize;
     }
 

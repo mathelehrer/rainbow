@@ -1,4 +1,9 @@
-package com.numbercruncher.rainbow;
+package com.numbercruncher.rainbow.materials;
+
+import com.numbercruncher.rainbow.*;
+import com.numbercruncher.rainbow.ray_tools.HitRecord;
+import com.numbercruncher.rainbow.ray_tools.Ray;
+import com.numbercruncher.rainbow.ray_tools.RaySpectral;
 
 /**
  * Dielectric (glass) material with wavelength-dependent index of refraction.
@@ -15,26 +20,37 @@ package com.numbercruncher.rainbow;
  *  - Total internal reflection
  *  - Schlick's approximation for Fresnel reflectance
  */
-public class MaterialGlass extends Material {
+public class Glass extends Material {
 
     private final double cauchyB;
     private final double cauchyC; // in μm²
+    private final double transparency; // 1.0 = perfectly clear, 0.0 = fully opaque
 
     /**
-     * Default BK7-like glass.
+     * Default BK7-like glass, perfectly clear.
      */
-    public MaterialGlass() {
-        this(1.5046, 0.00420);
+    public Glass() {
+        this(1.5046, 0.00420, 1.0);
     }
 
     /**
      * @param cauchyB base refractive index
      * @param cauchyC dispersion coefficient (μm²)
      */
-    public MaterialGlass(double cauchyB, double cauchyC) {
+    public Glass(double cauchyB, double cauchyC) {
+        this(cauchyB, cauchyC, 1.0);
+    }
+
+    /**
+     * @param cauchyB      base refractive index
+     * @param cauchyC      dispersion coefficient (μm²)
+     * @param transparency 1.0 = perfectly clear, 0.9 = slight tint, etc.
+     */
+    public Glass(double cauchyB, double cauchyC, double transparency) {
         super(Color.WHITE);
         this.cauchyB = cauchyB;
         this.cauchyC = cauchyC;
+        this.transparency = transparency;
     }
 
     /**
@@ -77,13 +93,7 @@ public class MaterialGlass extends Material {
     }
 
     @Override
-    public RayWithAttenuation scatter(Ray incident, HitRecord hitRecord) {
-        // Fallback: use midpoint of visible spectrum (~550nm)
-        return scatter(incident, hitRecord, 550.0);
-    }
-
-    @Override
-    public RayWithAttenuation scatter(Ray incident, HitRecord hitRecord, double lambda) {
+    public RaySpectral scatter(Ray incident, HitRecord hitRecord, double lambda, Scene scene) {
         double n = indexOfRefraction(lambda);
 
         Vector dir = incident.getDirection();
@@ -116,19 +126,13 @@ public class MaterialGlass extends Material {
         } else {
             // Probabilistic reflection vs refraction (Fresnel)
             double reflectProb = schlick(cosI, n1, n2);
-            if (Math.random() < reflectProb) {
+            if (java.util.concurrent.ThreadLocalRandom.current().nextDouble() < reflectProb) {
                 scatterDir = reflect(dir, outwardNormal);
             } else {
                 scatterDir = refracted;
             }
         }
 
-        // Glass is transparent — attenuation is white (no color absorption)
-        return new RayWithAttenuation(hitRecord.point, scatterDir, Color.WHITE);
-    }
-
-    @Override
-    public RayWithAttenuation transmitted(Ray incident) {
-        return null;
+        return new RaySpectral(hitRecord.point, scatterDir, lambda, transparency);
     }
 }

@@ -19,6 +19,10 @@ public class Vector {
         this.z=values[2];
     }
 
+    public double get(int index){
+        return index==0 ? x : index==1 ? y : z;
+    }
+
     public Vector add(Vector other){
         return new Vector(this.x+other.x,this.y+other.y,this.z+other.z);
     }
@@ -49,7 +53,7 @@ public class Vector {
 
     public static Vector randomUnitVector(){
         while(true) {
-            Vector rnd = new Vector(2 * Math.random() - 1, 2 * Math.random() - 1, 2 * Math.random() - 1);
+            Vector rnd = new Vector(2 * java.util.concurrent.ThreadLocalRandom.current().nextDouble() - 1, 2 * java.util.concurrent.ThreadLocalRandom.current().nextDouble() - 1, 2 * java.util.concurrent.ThreadLocalRandom.current().nextDouble() - 1);
             if (rnd.dot(rnd) > EPS * EPS) {
                 return rnd.normalize();
             }
@@ -71,8 +75,8 @@ public class Vector {
         Vector b = a.cross(normal).normalize();
         //generate random point on the tangent unit disk
 
-        double r = Math.sqrt(Math.random());
-        double phi = 2 * Math.PI * Math.random();
+        double r = Math.sqrt(java.util.concurrent.ThreadLocalRandom.current().nextDouble());
+        double phi = 2 * Math.PI * java.util.concurrent.ThreadLocalRandom.current().nextDouble();
         double x = r*Math.cos(phi);
         double y = r*Math.sin(phi);
         double z = Math.sqrt(1-r*r);

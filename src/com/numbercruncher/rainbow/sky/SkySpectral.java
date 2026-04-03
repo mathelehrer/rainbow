@@ -1,4 +1,8 @@
-package com.numbercruncher.rainbow;
+package com.numbercruncher.rainbow.sky;
+
+import com.numbercruncher.rainbow.*;
+import com.numbercruncher.rainbow.ray_tools.Radiance;
+import com.numbercruncher.rainbow.ray_tools.Ray;
 
 /**
  * A sky that displays the full visible spectrum horizontally.
@@ -12,16 +16,16 @@ package com.numbercruncher.rainbow;
  * For RGB preview: converts the mapped wavelength to an RGB color
  * via the CIE 1931 color matching functions.
  */
-public class SpectralSky extends Sky {
+public class SkySpectral extends Sky {
 
     private final double lambdaMin;
     private final double lambdaMax;
 
-    public SpectralSky() {
+    public SkySpectral() {
         this(CIE1931.LAMBDA_MIN, CIE1931.LAMBDA_MAX);
     }
 
-    public SpectralSky(double lambdaMin, double lambdaMax) {
+    public SkySpectral(double lambdaMin, double lambdaMax) {
         this.lambdaMin = lambdaMin;
         this.lambdaMax = lambdaMax;
     }

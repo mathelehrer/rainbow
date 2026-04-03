@@ -1,27 +1,49 @@
 package com.numbercruncher.rainbow;
 
+import com.numbercruncher.rainbow.materials.Material;
+import com.numbercruncher.rainbow.ray_tools.HitRecord;
+import com.numbercruncher.rainbow.ray_tools.Radiance;
+import com.numbercruncher.rainbow.ray_tools.Ray;
+import com.numbercruncher.rainbow.ray_tools.RaySpectral;
+
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
+
 import static com.numbercruncher.rainbow.CIE1931.RADIANCE_NORMALIZATION;
 
+
+
 public class Renderer {
-    private final Camera camera;
+    public static final Camera DEFAULT_CAMERA  =new Camera(16./9, 2, 1,
+            new Vector(0, -4, 0.5),   // origin
+            new Vector(0, 1, 0),       // look at center of scene
+            new Vector(0, 0, 1));
+    private Camera camera;
     private int width,height;
     private PPMImage image;
     private Scene scene;
-    private final int factor = 3;
+    private int factor;
 
+
+    public Renderer(Scene scene,Camera camera, int factor){
+        this.scene = scene;
+        this.camera = camera;
+        this.factor = factor;
+        this.width = 48*factor;
+        this.height = 27*factor;
+        this.image = new PPMImage(this.width,this.height,255);
+    }
+
+    public Renderer(Scene scene, int factor){
+        this(scene,DEFAULT_CAMERA,factor);
+    }
     public Renderer(Scene scene){
-        this(scene, new Camera(16./9, 2, 0.5,
-                new Vector(0, -2, 0.5),   // position: behind and above ground
-                new Vector(0, 1, 0),       // look at center of scene
-                new Vector(0, 0, 1)));     // world up = +z
+        this(scene,DEFAULT_CAMERA, 40);
     }
 
     public Renderer(Scene scene, Camera camera){
-        this.camera = camera;
-        this.width = 192*factor;
-        this.height = 108*factor;
-        this.image = new PPMImage(this.width,this.height,255);
-        this.scene = scene;
+        this(scene,camera,40);
     }
 
 
@@ -33,82 +55,28 @@ public class Renderer {
         this(Scene.DEFAULT_SCENE);
     }
 
-    private Color rayColor(Ray ray,int depth){
-        HitRecord record = scene.intersect(ray,new Interval(0.0001,Double.MAX_VALUE));
-        if (record==null || record.objectIndex==-1) {
-            //sample background
-            return scene.getSky().getColor(ray);
-        }
-        else {
-            if (depth >= this.camera.maxDepth) {
-                return Color.BLACK;
-            }
-            else{
-
-                Material mat  = scene.getObjects().get(record.objectIndex).getMaterial();
-                RayWithAttenuation scatter = mat.scatter(ray, record);
-                Vector normal = record.normal;
-
-                return scatter.getAttenuation().mul(rayColor(new Ray(record.point, scatter.getDirection()), depth + 1))
-                        .scale(0.5);
-            }
-        }
-
-    }
-
     /**
-     * Spectral ray color: trace a ray for a single wavelength.
+     * Trace a ray for a single wavelength.
      * Returns the spectral radiance (scalar) that arrives at the camera
      * for this wavelength along this ray path.
-     *
-     * For now, only the sky emits light spectrally. Objects attenuate
-     * uniformly (grayscale) — wavelength-dependent materials come in step 2.
      */
-    private Radiance spectralRayRadiance(Ray ray, double lambda, int depth) {
+    private Radiance rayRadiance(Ray ray, double lambda, int depth) {
         HitRecord record = scene.intersect(ray, new Interval(0.0001, Double.MAX_VALUE));
         if (record == null || record.objectIndex == -1) {
-            // Sky emission
-            Sky sky = scene.getSky();
-            if (sky instanceof SpectralSky) {
-                return ((SpectralSky) sky).getSpectralRadiance(ray, lambda);
-            } else if (sky instanceof CheckerSky) {
-                return ((CheckerSky) sky).getSpectralRadiance(ray, lambda);
-            }
-            // Fallback: use luminance of RGB sky color
-            Color c = sky.getColor(ray);
-            return new Radiance(0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b);
+            return scene.getSky().getSpectralRadiance(ray, lambda);
         }
         if (depth >= this.camera.maxDepth) {
             return Radiance.ZERO;
         }
         Material mat = scene.getObjects().get(record.objectIndex).getMaterial();
-        // Emission term: material emits light uniformly across all wavelengths
-        double emitted = mat.getEmission();
-        RayWithAttenuation scatter = mat.scatter(ray, record, lambda);
-        // Use average of attenuation RGB as wavelength-independent reflectance
-        Color att = scatter.getAttenuation();
-        Radiance reflectance = new Radiance((att.r + att.g + att.b) / 3.0);
-        Radiance reflected = reflectance.combine(spectralRayRadiance(
-                new Ray(record.point, scatter.getDirection()), lambda, depth + 1).diminish(0.5));
-        // L = emission + albedo * L_incoming
-        return new Radiance(emitted + reflected.value);
-    }
-
-    public void render(String filename){
-        Color[] colors = new Color[this.width*this.height];
-        double hm = 1./this.height;
-        double wm = 1./this.width;
-        for (int y = 0; y< this.height; y++) {
-            for (int x = 0; x < this.width; x++) {
-                Color pixelColor = new Color(0,0,0);
-                for (int sample =0;sample<camera.samplesPerPixel;sample++){
-                    Ray ray = this.camera.getRay(x*wm,y*hm,wm,hm);
-                    pixelColor=pixelColor.add(rayColor(ray,0));
-                }
-                colors[y*width+x] = pixelColor.scale(1./camera.samplesPerPixel);
-            }
-        }
-        this.image.create_from_color(colors,filename);
+        RaySpectral scatter = mat.scatter(ray, record, lambda, scene);
+        // Local radiance: emission + direct light (computed by the material)
+        double local = scatter.getRadiance();
+        // Indirect radiance: throughput * recursive bounce
+        Radiance reflectance = new Radiance(scatter.getThroughput());
+        Radiance reflected = reflectance.combine(rayRadiance(
+                new Ray(record.point, scatter.getDirection()), lambda, depth + 1));
+        return new Radiance(local + reflected.value);
     }
 
     /**
@@ -118,7 +86,7 @@ public class Renderer {
      *
      * This produces physically correct color from spectral data.
      */
-    public void renderSpectral(String filename) {
+    public void render(String filename) {
         Color[] colors = new Color[this.width * this.height];
         double hm = 1.0 / this.height;
         double wm = 1.0 / this.width;
@@ -127,11 +95,10 @@ public class Renderer {
         // The XYZ integral is:  X = integral( L(lambda) * xBar(lambda) dlambda )
         // Monte Carlo estimate: X ≈ (lambdaRange / N) * sum( L(lambda_i) * xBar(lambda_i) )
         double lambdaRange = CIE1931.LAMBDA_MAX - CIE1931.LAMBDA_MIN;
+        AtomicInteger progress = new AtomicInteger(0);
 
-        for (int y = 0; y < this.height; y++) {
-            if (y % 50 == 0) {
-                System.out.println("Spectral render: row " + y + "/" + this.height);
-            }
+        IntStream.range(0, this.height).parallel().forEach(y -> {
+            ThreadLocalRandom rng = ThreadLocalRandom.current();
             for (int x = 0; x < this.width; x++) {
                 double X = 0, Y = 0, Z = 0;
                 int totalSamples = camera.samplesPerPixel;
@@ -139,8 +106,8 @@ public class Renderer {
                 for (int sample = 0; sample < totalSamples; sample++) {
                     Ray ray = this.camera.getRay(x * wm, y * hm, wm, hm);
                     // Pick a random wavelength
-                    double lambda = CIE1931.LAMBDA_MIN + Math.random() * lambdaRange;
-                    Radiance l = spectralRayRadiance(ray, lambda, 0);
+                    double lambda = CIE1931.LAMBDA_MIN + rng.nextDouble() * lambdaRange;
+                    Radiance l = rayRadiance(ray, lambda, 0);
                     double nl = l.value / RADIANCE_NORMALIZATION;
                     // Accumulate XYZ weighted by color matching functions
                     X += nl * CIE1931.xBar(lambda);
@@ -164,7 +131,9 @@ public class Renderer {
                         Math.max(0, rgb.b)
                 );
             }
-        }
+            int done = progress.incrementAndGet();
+            if (done % 50 == 0) System.out.println("Render: row " + done + "/" + height);
+        });
 
         this.image.create_from_color(colors, filename);
     }
@@ -180,6 +149,6 @@ public class Renderer {
             }
 
         }
-        this.image.create_from_color(colors,"test_image2");
+        this.image.create_from_color(colors,"test_image_gradient");
     }
 }

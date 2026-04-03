@@ -1,4 +1,6 @@
-package com.numbercruncher.rainbow;
+package com.numbercruncher.rainbow.ray_tools;
+
+import com.numbercruncher.rainbow.Vector;
 
 public class HitRecord {
     public Vector point;

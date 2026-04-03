@@ -1,6 +1,10 @@
 package com.numbercruncher.rainbow;
 
 
+import com.numbercruncher.rainbow.ray_tools.Ray;
+
+import static java.util.concurrent.ThreadLocalRandom.current;
+
 public class Camera {
     public static final int samplesPerPixel=1000;
     public static final int maxDepth = 25;
@@ -58,10 +62,10 @@ public class Camera {
                 .sub(viewportV.scale(0.5));
     }
 
-    public Ray getRay(double u,double v,double du, double dv){
+    public Ray getRay(double u, double v, double du, double dv){
         //random fluctuation for antialiasing
-        u+=1*(-0.5+Math.random())*du;
-        v+=1*(-0.5+Math.random())*dv;
+        u+=1*(-0.5+ current().nextDouble())*du;
+        v+=1*(-0.5+ current().nextDouble())*dv;
 
         return new Ray(origin,
                 this.lowerLeftCorner.add(this.viewportU.scale(u)).add(this.viewportV.scale(v)).sub(origin));

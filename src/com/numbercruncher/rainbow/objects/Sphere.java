@@ -1,6 +1,11 @@
-package com.numbercruncher.rainbow;
+package com.numbercruncher.rainbow.objects;
 
-public class Sphere implements SceneObject{
+import com.numbercruncher.rainbow.*;
+import com.numbercruncher.rainbow.materials.Material;
+import com.numbercruncher.rainbow.ray_tools.HitRecord;
+import com.numbercruncher.rainbow.ray_tools.Ray;
+
+public class Sphere implements SceneObject {
     private final double radius;
     private final Vector center;
 

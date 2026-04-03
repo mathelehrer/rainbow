@@ -250,4 +250,54 @@ Overwrite file
   new Sphere(1, new Vector(0, 2, 0), new MaterialGlass())
   or with custom dispersion:
   new MaterialGlass(1.7, 0.01)  // flint glass, stronger dispersion
+● Done.
 
+Changes:
+
+  - Renderer.java — Both render() and renderSpectral() now use IntStream.range(0, height).parallel() to distribute rows across all CPU
+  cores. Progress reporting uses AtomicInteger.
+  - Vector.java, Camera.java, MaterialGlass.java — Replaced Math.random() with ThreadLocalRandom.current().nextDouble() to avoid lock
+  contention between threads.
+
+  This should scale linearly with the number of cores. Each row is fully independent — no shared mutable state.
+
+● Done. The SkySunny has:
+
+  - Sun disk — Planck blackbody at 5800K, angular radius matching the real sun (0.27°). Adjustable intensity.
+  - Sky dome — Rayleigh scattering (∝ 1/λ⁴) giving blue sky, brighter near horizon, modulated by the sun's spectrum.
+  - Mie glow — Soft forward-scattering halo around the sun.
+  - Configurable — SkySunny(altitude, azimuth, temperature, sunIntensity, skyIntensity). Default: sun at 45° elevation, straight ahead.
+
+  Scene SUNNY_SCENE has the same objects as the checker scene (green plane, red sphere, glass sphere, metal sphere). Test:
+  renderSunnyScene → sunny_scene.ppm.
+
+
+   1. Renamed SpectralRay → RaySpectral (new file, old one deleted)
+  2. Material.scatter(Ray, HitRecord, double lambda) — now returns RaySpectral
+  instead of RayWithAttenuation. The default implementation converts the RGB
+  attenuation to a spectral reflectance and stores it as throughput.
+  3. Glass.scatter(Ray, HitRecord, double lambda) — returns RaySpectral directly
+   with throughput = transparency.
+  4. Renderer.spectralRayRadiance — uses RaySpectral and reads getThroughput()
+  directly instead of converting from Color.spectralReflectance().
+  5. Non-spectral path (rayColor, Metal, Lambertian, Default) — still uses
+  RayWithAttenuation, unchanged.
+
+
+● Good — emission is no longer read separately in the Renderer; it's now the
+  material's responsibility via scatter.
+
+  For Glass, Metal, and Default, emission is 0 by default and they don't set
+  radiance on the returned RaySpectral, so local = 0 for those — correct.
+
+  Here's a summary of the three contributions in Lambertian.scatter:
+
+  1. Reflectance (throughput) — spectralReflectance(λ) * cos(θ) * albedo,
+  carried as throughput for the indirect recursive bounce
+  2. Emission — getEmission(), added to the RaySpectral.radiance field
+  3. Direct sun sampling (NEE) — if the sky is SkySunny, samples a random
+  direction in the sun cone, shoots a shadow ray, and if unoccluded adds BRDF *
+  cos(θ_sun) * sunRadiance * sunSolidAngle to radiance
+
+  The Renderer now combines: L = local_radiance + throughput * L_recursive,
+  where local_radiance includes both emission and direct light.
