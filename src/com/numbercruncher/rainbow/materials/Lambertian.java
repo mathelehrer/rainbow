@@ -10,6 +10,7 @@ import com.numbercruncher.rainbow.sky.SkySunny;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static com.numbercruncher.rainbow.Utils.EPS;
+import static com.numbercruncher.rainbow.sky.SkySunny.SUN_ANGLE;
 
 public class Lambertian extends Material {
     private final double albedo; //a measure for the reflectiveness of the material
@@ -47,21 +48,21 @@ public class Lambertian extends Material {
         if (scene.getSky() instanceof SkySunny) {
             SkySunny sun = (SkySunny) scene.getSky();
             // Sample a random direction within the sun's cone
-            Vector sunDir = sampleSunCone(sun.getSunDirection(), Math.toRadians(0.27));
+            Vector sunDir = sampleSunCone(sun.getSunDirection(), Math.toRadians(SUN_ANGLE));
             double cosSun = sunDir.dot(hitRecord.normal);
             if (cosSun > 0) {
                 // Shadow ray: check if any object occludes the path to the sun
                 Ray shadowRay = new Ray(hitRecord.point, sunDir);
                 HitRecord shadowHit = scene.intersect(shadowRay, new Interval(0.0001, Double.MAX_VALUE));
-                if (true){//shadowHit == null || shadowHit.objectIndex == -1) {
+                if (shadowHit == null || shadowHit.objectIndex == -1) {
                     // Unoccluded — add sun's spectral radiance weighted by Lambertian BRDF
                     // BRDF for Lambertian = albedo * spectralReflectance / π
                     // The solid angle of the sun cone is 2π(1 - cos(θ_sun))
-                    double sunAngularRadius = Math.toRadians(0.27);
+                    double sunAngularRadius = Math.toRadians(SUN_ANGLE);
                     double sunSolidAngle = 2.0 * Math.PI * (1.0 - Math.cos(sunAngularRadius));
                     Radiance sunRadiance = sun.getSpectralRadiance(shadowRay, lambda);
                     double brdf = color.spectralReflectance(lambda) * albedo / Math.PI;
-                    directRadiance = brdf * cosSun * sunRadiance.value * sunSolidAngle;
+                    directRadiance = brdf * cosSun * sunRadiance.value;
                 }
             }
         }

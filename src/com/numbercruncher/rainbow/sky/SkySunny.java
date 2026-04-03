@@ -15,6 +15,7 @@ import com.numbercruncher.rainbow.Vector;
  * The sun direction is specified via altitude and azimuth angles.
  */
 public class SkySunny extends Sky {
+    public static final double SUN_ANGLE = 1.0; //0.27
 
     private final Vector sunDirection; // unit vector toward the sun
     private final double sunAngularRadius; // radians (sun is ~0.27° = 0.0047 rad)
@@ -47,7 +48,7 @@ public class SkySunny extends Sky {
                 cosAlt * Math.cos(azimuth),
                 Math.sin(altitude)
         ).normalize();
-        this.sunAngularRadius = Math.toRadians(0.27);
+        this.sunAngularRadius = Math.toRadians(SUN_ANGLE);
         this.sunTemperature = temperature;
         this.sunIntensity = sunIntensity;
         this.skyIntensity = skyIntensity;

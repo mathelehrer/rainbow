@@ -62,12 +62,12 @@ public class Scene {
     // Camera on -x side to look through the angled faces (where dispersion happens).
     // Small prism, floor visible, sky visible around it.
     public static final Scene PRISM_SUNNY = new Scene(
-            new SkySunny(Math.toRadians(45), Math.PI/2, 5800.0, 5.0, 0.1))
+            new SkySunny(Math.toRadians(5), Math.PI/2, 5800.0, 5.0, 0.1))
             .addObject(new Plane(new Vector(0, 0, 1), new Vector(0, 0, -1),
                     new Lambertian(Color.WHITE)))  // gray floor
-            .addObject(new Prism(new Vector(0, 5, -0.5),
-                    new Vector(0*Math.PI/2,0*Math.PI/2,0*Math.PI/2),
-                    2.0,2.0,
+            .addObject(new Prism(new Vector(2, 5, -0.25),
+                    new Vector(0*Math.PI/2,-0.1*Math.PI/2,0*Math.PI/2),
+                    1.5,2.0,
                     new Glass(1.7, 0.01,0.8)))
 //            .addObject(new Cube( new Vector(-1.5, 7, -1),3,
 //                    new Vector(0,0,0), new Metal(0.1,0.1)))
