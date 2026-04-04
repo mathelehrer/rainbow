@@ -22,6 +22,11 @@ import com.numbercruncher.rainbow.ray_tools.RaySpectral;
  */
 public class Glass extends Material {
 
+    // Minimum probability for sampling the reflection path (importance sampling).
+    // Boosts internal reflections so rainbow caustics are visible in backward path tracing.
+    // The throughput is adjusted to keep the estimator unbiased.
+    private static final double MIN_REFLECT_SAMPLE = 0.25;
+
     private final double cauchyB;
     private final double cauchyC; // in μm²
     private final double transparency; // 1.0 = perfectly clear, 0.0 = fully opaque
@@ -120,19 +125,26 @@ public class Glass extends Material {
         Vector refracted = refract(dir, outwardNormal, eta);
 
         Vector scatterDir;
+        double throughput = transparency;
         if (refracted == null) {
             // Total internal reflection
             scatterDir = reflect(dir, outwardNormal);
         } else {
-            // Probabilistic reflection vs refraction (Fresnel)
+            // Importance sampling: boost reflection probability to capture
+            // rainbow caustics while keeping the estimator unbiased.
+            // Without this, only ~2% of rays reflect inside water drops,
+            // making rainbows invisible in backward path tracing.
             double reflectProb = schlick(cosI, n1, n2);
-            if (java.util.concurrent.ThreadLocalRandom.current().nextDouble() < reflectProb) {
+            double sampleProb = Math.max(reflectProb, MIN_REFLECT_SAMPLE);
+            if (java.util.concurrent.ThreadLocalRandom.current().nextDouble() < sampleProb) {
                 scatterDir = reflect(dir, outwardNormal);
+                throughput *= reflectProb / sampleProb;
             } else {
                 scatterDir = refracted;
+                throughput *= (1.0 - reflectProb) / (1.0 - sampleProb);
             }
         }
 
-        return new RaySpectral(hitRecord.point, scatterDir, lambda, transparency);
+        return new RaySpectral(hitRecord.point, scatterDir, lambda, throughput);
     }
 }

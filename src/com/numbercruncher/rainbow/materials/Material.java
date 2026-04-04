@@ -21,6 +21,15 @@ public abstract class Material {
 
     public abstract RaySpectral scatter(Ray incident, HitRecord hitRecord, double lambda, Scene scene);
 
+    /**
+     * Whether this material explicitly samples the sun (NEE).
+     * If true, the renderer excludes the sun disk from the sky for bounce rays
+     * to avoid double-counting.
+     */
+    public boolean usesDirectLightSampling() {
+        return false;
+    }
+
     public Color getColor(){
         return color;
     }

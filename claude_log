@@ -357,3 +357,36 @@ How it works
       Vector pos = randomPositionInVolume();
       scene.addObject(new Sphere(0.002, pos, new Glass(1.33, 0.006)));
   }
+
+  Scene (Scene.createRainbowScene()):
+  - Sun: behind the camera at 20° altitude, azimuth=π. Low sun ensures the
+  rainbow arc rises above the horizon
+  - Ground: green Lambertian plane at z=0
+  - 10,000 water drops: Glass with water's Cauchy coefficients (B=1.324,
+  C=0.00310 μm²), giving n(380nm)≈1.345 down to n(780nm)≈1.329. Radius
+  0.06–0.10, randomly placed in a volume x∈[-10,10], y∈[5,20], z∈[0,10]
+
+  Camera: at (0, 0, 1.5) looking toward (0, 15, 5) — forward and slightly up to
+  frame the rainbow arc
+
+  Physics: Sunlight enters a drop, refracts, reflects off the back surface
+  (Fresnel in Glass), and refracts out. The wavelength-dependent IOR separates
+  colors naturally. The exit angle peaks at ~42° from the anti-solar point,
+  producing the rainbow arc. The BVH makes intersection with 10,000 drops
+  efficient (O(log N) per ray).
+
+  The test is renderRainbow() at factor=10 (480×270). You can run it to see the
+  result.
+
+  The problem: Water's Fresnel reflectance at the rainbow angle is only ~2%.
+  With 1000 samples per pixel, only ~12 rays per pixel follow the internal
+  reflection path that creates the rainbow. This is far too few — the rainbow
+  signal is buried in noise.
+
+  The fix — importance sampling: Instead of sampling reflection with the true
+  Fresnel probability (2%), we sample with max(fresnelProb, 25%). When we choose
+   reflection, the throughput is scaled down by fresnelProb / sampleProb to
+  compensate. When we choose refraction, the throughput is scaled up by
+  (1-fresnelProb) / (1-sampleProb). This is mathematically unbiased — the
+  expected result is identical, but ~250 rays per pixel now follow the rainbow
+  path instead of 12, dramatically reducing variance on the caustic.

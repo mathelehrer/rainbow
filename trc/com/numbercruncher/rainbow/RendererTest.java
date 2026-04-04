@@ -57,7 +57,21 @@ class RendererTest {
                 new Vector(0, 1, 0),//lookAt
                 new Vector(0, 0, 1));//world up
         Renderer renderer = new Renderer(Scene.PRISM_SUNNY, camera, 40);
-        renderer.render("test_image_prism_sunny");
+        renderer.render("test_image_prism_sunny_tent");
+    }
+
+    @Test
+    void renderRainbow(){
+        // Camera close to origin, looking forward and upward into the drops.
+        // Sun is behind camera at 20° altitude → rainbow arc at ~42° from anti-solar point
+        // which is ~22° above horizontal.
+        // Keeping origin close to (0,0,0) gives wide effective FOV after .sub(origin).
+        Camera camera = new Camera(16./9, 2, 1,
+                new Vector(0, -1, 0.1),   // close to origin for wide FOV
+                new Vector(0, 8, 6),      // look forward and up toward rainbow arc
+                new Vector(0, 0, 1));
+        Renderer renderer = new Renderer(Scene.createRainbowScene(), camera, 10);
+        renderer.render("test_image_rainbow");
     }
 
     @Test

@@ -15,12 +15,13 @@ import com.numbercruncher.rainbow.Vector;
  * The sun direction is specified via altitude and azimuth angles.
  */
 public class SkySunny extends Sky {
-    public static final double SUN_ANGLE = 2.0; //0.27
+    public static final double SUN_ANGLE = 0.27;
 
     private final Vector sunDirection; // unit vector toward the sun
     private final double sunAngularRadius; // radians (sun is ~0.27° = 0.0047 rad)
+    private final double sunSolidAngle; // solid angle of sun disk in steradians
     private final double sunTemperature; // Kelvin
-    private final double sunIntensity; // multiplier for sun disk
+    private final double sunIntensity; // multiplier for sun disk (irradiance-like)
     private final double skyIntensity; // multiplier for sky dome
 
     /**
@@ -28,7 +29,7 @@ public class SkySunny extends Sky {
      * temperature 5800K, realistic angular size.
      */
     public SkySunny() {
-        this(Math.toRadians(45), 0.0, 5800.0, 5.0, 0.6);
+        this(Math.toRadians(45), 0.0, 5800.0, 5.0, 0.2);
     }
 
     /**
@@ -40,6 +41,19 @@ public class SkySunny extends Sky {
      */
     public SkySunny(double altitude, double azimuth, double temperature,
                     double sunIntensity, double skyIntensity) {
+        this(altitude, azimuth, temperature, sunIntensity, skyIntensity, SUN_ANGLE);
+    }
+
+    /**
+     * @param altitude      sun altitude in radians above horizon
+     * @param azimuth       sun azimuth in radians (0 = +y direction)
+     * @param temperature   sun color temperature in Kelvin
+     * @param sunIntensity  brightness multiplier for the sun disk
+     * @param skyIntensity  brightness multiplier for the sky dome
+     * @param sunAngleDeg   sun angular radius in degrees (0.27 = realistic, 2.0 = lower noise)
+     */
+    public SkySunny(double altitude, double azimuth, double temperature,
+                    double sunIntensity, double skyIntensity, double sunAngleDeg) {
         // Convert altitude/azimuth to a direction vector
         // camera looks along +y, up is +z
         double cosAlt = Math.cos(altitude);
@@ -48,7 +62,8 @@ public class SkySunny extends Sky {
                 cosAlt * Math.cos(azimuth),
                 Math.sin(altitude)
         ).normalize();
-        this.sunAngularRadius = Math.toRadians(SUN_ANGLE);
+        this.sunAngularRadius = Math.toRadians(sunAngleDeg);
+        this.sunSolidAngle = 2.0 * Math.PI * (1.0 - Math.cos(this.sunAngularRadius));
         this.sunTemperature = temperature;
         this.sunIntensity = sunIntensity;
         this.skyIntensity = skyIntensity;
@@ -57,15 +72,34 @@ public class SkySunny extends Sky {
 
     /**
      * Spectral radiance for a given ray direction and wavelength.
+     *
+     * The sun disk returns physical radiance (per steradian):
+     *   L_sun = sunIntensity * planck / sunSolidAngle
+     * so that the total irradiance from the sun (L_sun * Omega) equals
+     * sunIntensity * planck — matching the convention used everywhere else.
+     *
+     * This is critical for rainbows: glass bounce rays that hit the sun
+     * must receive the correct high per-steradian radiance.
      */
     public double getSpectralRadiance(Ray ray, double lambda) {
+        return getSpectralRadiance(ray, lambda, false);
+    }
+
+    /**
+     * Spectral radiance with option to exclude the sun disk.
+     * When excludeSun is true, only sky dome + Mie glow are returned.
+     * This avoids double-counting when NEE already sampled the sun.
+     */
+    @Override
+    public double getSpectralRadiance(Ray ray, double lambda, boolean excludeSun) {
         Vector dir = ray.getDirection();
         double cosAngle = dir.dot(sunDirection);
         double angle = Math.acos(Math.min(1.0, Math.max(-1.0, cosAngle)));
 
         double sun = 0.0;
-        if (angle < sunAngularRadius) {
-            sun = sunIntensity * Utils.planck(lambda, sunTemperature);
+        if (!excludeSun && angle < sunAngularRadius) {
+            // Physical per-steradian radiance of the sun disk
+            sun = sunIntensity * Utils.planck(lambda, sunTemperature) / sunSolidAngle;
         }
 
         // Rayleigh scattering gives blue tint (1/lambda^4)
@@ -109,5 +143,13 @@ public class SkySunny extends Sky {
 
     public Vector getSunDirection() {
         return sunDirection;
+    }
+
+    public double getSunAngularRadius() {
+        return sunAngularRadius;
+    }
+
+    public double getSunSolidAngle() {
+        return sunSolidAngle;
     }
 }

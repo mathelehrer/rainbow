@@ -21,6 +21,16 @@ public class Sky implements SceneObject {
         return 1.0 * (1.0 - a) + 0.7 * a;
     }
 
+    /**
+     * Spectral radiance with option to exclude the sun disk.
+     * Used to avoid double-counting when next-event estimation already
+     * sampled the sun explicitly.
+     * Default implementation ignores the flag.
+     */
+    public double getSpectralRadiance(Ray ray, double lambda, boolean excludeSun) {
+        return getSpectralRadiance(ray, lambda);
+    }
+
     @Override
     public HitRecord intersect(Ray ray) {
         return null;

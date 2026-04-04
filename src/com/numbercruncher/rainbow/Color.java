@@ -57,9 +57,13 @@ public class Color {
      * @return spectral reflectance in [0, ~1] (may slightly exceed 1 for saturated colors)
      */
     public double spectralReflectance(double lambda) {
-        double rBasis = gaussian(lambda, 630, 58);
-        double gBasis = gaussian(lambda, 532, 55);
-        double bBasis = gaussian(lambda, 465, 48);
+        // Narrower Gaussians (sigma=35) preserve color saturation much better.
+        // With sigma~55, the basis overlap so much that Color(0.3,0.5,0.2) produces
+        // a nearly flat spectrum (beige). With sigma=35, green/red ratio is 1.6:1
+        // instead of 1.2:1, giving visibly green surfaces under white light.
+        double rBasis = gaussian(lambda, 630, 35);
+        double gBasis = gaussian(lambda, 532, 35);
+        double bBasis = gaussian(lambda, 465, 35);
 
         double white = rBasis + gBasis + bBasis;
         if (white < 1e-6) return 0.0;

@@ -69,6 +69,60 @@ public class Scene {
                     2,2.0,
                     new Glass(1.7, 0.01,0.8)));
 
+    /**
+     * Rainbow scene: 10,000 water droplets in front of the camera,
+     * sun behind the camera at low altitude. The spectral dispersion
+     * in the Glass material produces the rainbow naturally.
+     */
+    public static Scene createRainbowScene() {
+        // Sun behind camera (azimuth = π), low altitude → anti-solar point forward and below
+        // Rainbow arc appears at ~42° from anti-solar point → ~22° above horizontal
+        //
+        // Sun angle = 2° (larger than realistic 0.27°) for variance reduction:
+        // a bigger sun disk means more glass exit rays hit it, giving a smoother
+        // rainbow with the same sample count.  The sun is behind the camera so
+        // its disk size is not visible.
+        SkySunny sky = new SkySunny(
+                Math.toRadians(20),  // altitude: 20° above horizon
+                Math.PI,             // azimuth: behind camera (-y direction)
+                5800.0,              // blackbody temperature
+                5.0,                 // sun intensity
+                0.01,                // dim sky for contrast
+                2.0                  // sun angle in degrees (variance reduction)
+        );
+
+        Scene scene = new Scene(sky);
+
+        // Ground plane
+        scene.addObject(new Plane(
+                new Vector(0, 0, 1),
+                new Vector(0, 0, 0),
+                new Lambertian(new Color(0.3, 0.5, 0.2)) // grass green
+        ));
+
+        // Water: Cauchy coefficients for water (n ≈ 1.333 at 589nm)
+        // B=1.324, C=0.00310 μm² gives n(380)≈1.345, n(550)≈1.334, n(780)≈1.329
+        Glass water = new Glass(1.324, 0.00310);
+
+        // Distribute drops in front of the camera.
+        // Camera is at y=-1, drops start at y=4.
+        // Volume: x in [-10,10], y in [4,14], z in [0,8]
+        //
+        // Radius 0.001–0.002: angular size < 1 pixel at nearest distance (5 units),
+        // so individual drops are invisible. 600k drops maintains enough optical
+        // depth (~5% hit rate) for a clear rainbow signal.
+        java.util.Random rng = new java.util.Random(42);
+        for (int i = 0; i < 600000; i++) {
+            double x = (rng.nextDouble() - 0.5) * 20;      // -10 to 10
+            double y = 4 + rng.nextDouble() * 10;           //  4 to 14
+            double z = rng.nextDouble() * 8;                 //  0 to 8
+            double radius = 0.001 + rng.nextDouble() * 0.001;  // 0.001 to 0.002
+            scene.addObject(new Sphere(radius, new Vector(x, y, z), water));
+        }
+
+        return scene;
+    }
+
     private List<SceneObject> objects;
     private Sky sky;
 
@@ -138,10 +192,6 @@ public class Scene {
         return objects;
     }
 
-    public void removeObject(SceneObject object){
-        objects.remove(object);
-    }
-
     public Sky getSky(){
         return sky;
     }
@@ -154,7 +204,7 @@ public class Scene {
      *
      */
     public static final Scene PRISM_SUNNY = new Scene(
-            new SkySunny(Math.toRadians(1), Math.PI/2, 5800.0, 5.0, 0.1))
+            new SkySunny(Math.toRadians(1), Math.PI/2, 5800.0, 5.0, 0.01))
             .addObject(new Plane(new Vector(0, 0, 1), new Vector(0, 0, -1),
                     new Lambertian(Color.WHITE)))  // gray floor
             .addObject(new Prism(new Vector(2, 5, -0.5),

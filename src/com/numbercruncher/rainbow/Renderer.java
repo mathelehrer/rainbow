@@ -58,11 +58,14 @@ public class Renderer {
      * Trace a ray for a single wavelength.
      * Returns the spectral radiance (scalar) that arrives at the camera
      * for this wavelength along this ray path.
+     *
+     * @param excludeSunFromSky if true, the sun disk is excluded when the ray
+     *                          misses all objects (avoids double-counting with NEE)
      */
-    private double rayRadiance(Ray ray, double lambda, int depth) {
+    private double rayRadiance(Ray ray, double lambda, int depth, boolean excludeSunFromSky) {
         HitRecord record = scene.intersect(ray, new Interval(0.0001, Double.MAX_VALUE));
         if (record == null || record.objectIndex == -1) {
-            return scene.getSky().getSpectralRadiance(ray, lambda);
+            return scene.getSky().getSpectralRadiance(ray, lambda, excludeSunFromSky);
         }
         if (depth >= Camera.maxDepth) {
             return 0.0;
@@ -70,8 +73,11 @@ public class Renderer {
         Material mat = scene.getObjects().get(record.objectIndex).getMaterial();
         RaySpectral scatter = mat.scatter(ray, record, lambda, scene);
         double local = scatter.getRadiance();
+        // If this material uses NEE (direct sun sampling), exclude the sun
+        // from the sky for the bounce ray to avoid double-counting.
+        boolean nextExcludeSun = mat.usesDirectLightSampling();
         double reflected = scatter.getThroughput() * rayRadiance(
-                new Ray(record.point, scatter.getDirection()), lambda, depth + 1);
+                new Ray(record.point, scatter.getDirection()), lambda, depth + 1, nextExcludeSun);
         return local + reflected;
     }
 
@@ -102,7 +108,7 @@ public class Renderer {
                 for (int sample = 0; sample < totalSamples; sample++) {
                     Ray ray = this.camera.getRay(x,y, pixelWidth, pixelHeight);
                     double lambda = CIE1931.LAMBDA_MIN + rng.nextDouble() * lambdaRange;
-                    double nl = rayRadiance(ray, lambda, 0) / RADIANCE_NORMALIZATION;
+                    double nl = rayRadiance(ray, lambda, 0, false) / RADIANCE_NORMALIZATION;
                     X += nl * CIE1931.xBar(lambda);
                     Y += nl * CIE1931.yBar(lambda);
                     Z += nl * CIE1931.zBar(lambda);
