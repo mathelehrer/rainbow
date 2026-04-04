@@ -98,7 +98,7 @@ public class Renderer {
         // Monte Carlo estimate: X ≈ (lambdaRange / N) * sum( L(lambda_i) * xBar(lambda_i) )
         double lambdaRange = CIE1931.LAMBDA_MAX - CIE1931.LAMBDA_MIN;
         AtomicInteger progress = new AtomicInteger(0);
-
+        long start = System.currentTimeMillis();
         IntStream.range(0, this.height).parallel().forEach(y -> {
             ThreadLocalRandom rng = ThreadLocalRandom.current();
             for (int x = 0; x < this.width; x++) {
@@ -135,6 +135,7 @@ public class Renderer {
         });
 
         this.image.create_from_color(colors, filename);
+        System.out.println("Render time: " + (System.currentTimeMillis() - start) + " ms");
     }
 
 

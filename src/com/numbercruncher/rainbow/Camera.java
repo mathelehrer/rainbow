@@ -4,7 +4,7 @@ import static java.util.concurrent.ThreadLocalRandom.current;
 
 public class Camera {
     public static final int samplesPerPixel=10000;
-    public static final int maxDepth = 25;
+    public static final int maxDepth = 5;
 
     private final double aspectRatio;
     private final double height;
