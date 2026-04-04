@@ -107,7 +107,12 @@ public class Renderer {
 
                 for (int sample = 0; sample < totalSamples; sample++) {
                     Ray ray = this.camera.getRay(x,y, pixelWidth, pixelHeight);
-                    double lambda = CIE1931.LAMBDA_MIN + rng.nextDouble() * lambdaRange;
+                    // Stratified wavelength sampling: divide [380,780] into N equal
+                    // strata, jitter within each.  Every pixel gets balanced spectral
+                    // coverage, eliminating the colored-speckle noise that comes from
+                    // random wavelength selection.
+                    double lambda = CIE1931.LAMBDA_MIN
+                            + ((sample + rng.nextDouble()) / totalSamples) * lambdaRange;
                     double nl = rayRadiance(ray, lambda, 0, false) / RADIANCE_NORMALIZATION;
                     X += nl * CIE1931.xBar(lambda);
                     Y += nl * CIE1931.yBar(lambda);

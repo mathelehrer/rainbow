@@ -18,7 +18,7 @@ import com.numbercruncher.rainbow.ray_tools.RaySpectral;
  * Implements:
  *  - Snell's law for refraction
  *  - Total internal reflection
- *  - Schlick's approximation for Fresnel reflectance
+ *  - Exact Fresnel reflectance (unpolarized)
  */
 public class Glass extends Material {
 
@@ -68,13 +68,22 @@ public class Glass extends Material {
     }
 
     /**
-     * Schlick's approximation for Fresnel reflectance.
+     * Exact Fresnel reflectance for unpolarized light.
+     *
+     * @param cosI  cosine of the angle of incidence (always positive)
+     * @param n1    refractive index on the incident side
+     * @param n2    refractive index on the transmitted side
+     * @return reflectance in [0, 1]
      */
-    private static double schlick(double cosTheta, double n1, double n2) {
-        double r0 = (n1 - n2) / (n1 + n2);
-        r0 = r0 * r0;
-        double x = 1.0 - cosTheta;
-        return r0 + (1.0 - r0) * x * x * x * x * x;
+    private static double fresnel(double cosI, double n1, double n2) {
+        double sinI = Math.sqrt(1.0 - cosI * cosI);
+        double sinT = (n1 / n2) * sinI;
+        if (sinT >= 1.0) return 1.0; // total internal reflection
+        double cosT = Math.sqrt(1.0 - sinT * sinT);
+
+        double rs = (n1 * cosI - n2 * cosT) / (n1 * cosI + n2 * cosT);
+        double rp = (n2 * cosI - n1 * cosT) / (n2 * cosI + n1 * cosT);
+        return 0.5 * (rs * rs + rp * rp);
     }
 
     /**
@@ -134,7 +143,7 @@ public class Glass extends Material {
             // rainbow caustics while keeping the estimator unbiased.
             // Without this, only ~2% of rays reflect inside water drops,
             // making rainbows invisible in backward path tracing.
-            double reflectProb = schlick(cosI, n1, n2);
+            double reflectProb = fresnel(cosI, n1, n2);
             double sampleProb = Math.max(reflectProb, MIN_REFLECT_SAMPLE);
             if (java.util.concurrent.ThreadLocalRandom.current().nextDouble() < sampleProb) {
                 scatterDir = reflect(dir, outwardNormal);

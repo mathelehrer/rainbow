@@ -390,3 +390,17 @@ How it works
   (1-fresnelProb) / (1-sampleProb). This is mathematically unbiased — the
   expected result is identical, but ~250 rays per pixel now follow the rainbow
   path instead of 12, dramatically reducing variance on the caustic.
+
+    Glass.java: Replaced Schlick's approximation with the exact Fresnel equations
+  for unpolarized light:
+
+  rs = (n1·cosI - n2·cosT) / (n1·cosI + n2·cosT)
+  rp = (n2·cosI - n1·cosT) / (n2·cosI + n1·cosT)
+  R  = (rs² + rp²) / 2
+
+  This is exact for all angles — no grazing-angle error, no need for the n1 > n2
+   cosT workaround. The cost is just two extra divides per interface, which is
+  negligible compared to the ray-sphere intersection.
+
+  Test: Tightened tolerance from 0.05–0.10 down to 0.02 (only Monte Carlo
+  sampling noise remains).

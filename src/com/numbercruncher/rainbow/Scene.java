@@ -111,13 +111,20 @@ public class Scene {
         // Radius 0.001–0.002: angular size < 1 pixel at nearest distance (5 units),
         // so individual drops are invisible. 600k drops maintains enough optical
         // depth (~5% hit rate) for a clear rainbow signal.
-        java.util.Random rng = new java.util.Random(42);
-        for (int i = 0; i < 600000; i++) {
-            double x = (rng.nextDouble() - 0.5) * 20;      // -10 to 10
-            double y = 4 + rng.nextDouble() * 10;           //  4 to 14
-            double z = rng.nextDouble() * 8;                 //  0 to 8
-            double radius = 0.001 + rng.nextDouble() * 0.001;  // 0.001 to 0.002
-            scene.addObject(new Sphere(radius, new Vector(x, y, z), water));
+
+        Sobol sobol = new Sobol();
+        double[] r = new double[4];
+        for (int i = 0; i < 100; i++) {
+            for (int j = 0; j < 50; j++) {
+                sobol.next(4, r);
+                //double x =-3+r[0] * 6;                    // 0 to 5
+                double x = -5 + 0.1 * i % 100;                    // 0 to 5
+                double y = 2 + r[1] * 0;                    // 0 to 4
+                //double z = 1+r[2] * 3;                     // 0 to 4
+                double z = 1 + 0.1 * i / 10;                     // 0 to 4
+                double radius = 0.05 + r[3] * 0;   // 0.001 to 0.002
+                scene.addObject(new Sphere(radius, new Vector(x, y, z), water));
+            }
         }
 
         return scene;

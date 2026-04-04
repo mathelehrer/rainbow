@@ -20,4 +20,6 @@ public class Utils {
         double radiance = c1 / (Math.pow(lambdaM, 5) * (Math.exp(c2 / (lambdaM * T)) - 1.0));
         return radiance / 2.634e13;
     }
+
+
 }

@@ -70,7 +70,7 @@ class RendererTest {
                 new Vector(0, -1, 0.1),   // close to origin for wide FOV
                 new Vector(0, 8, 6),      // look forward and up toward rainbow arc
                 new Vector(0, 0, 1));
-        Renderer renderer = new Renderer(Scene.createRainbowScene(), camera, 10);
+        Renderer renderer = new Renderer(Scene.createRainbowScene(), camera, 5);
         renderer.render("test_image_rainbow");
     }
 

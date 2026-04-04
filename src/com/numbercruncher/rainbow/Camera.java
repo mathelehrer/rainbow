@@ -3,8 +3,8 @@ import com.numbercruncher.rainbow.ray_tools.Ray;
 import static java.util.concurrent.ThreadLocalRandom.current;
 
 public class Camera {
-    public static final int samplesPerPixel=10000;
-    public static final int maxDepth = 5;
+    public static final int samplesPerPixel=100;
+    public static final int maxDepth = 23;
 
     private final double aspectRatio;
     private final double height;
