@@ -5,6 +5,7 @@ import com.numbercruncher.rainbow.materials.Glass;
 import com.numbercruncher.rainbow.materials.Lambertian;
 import com.numbercruncher.rainbow.materials.Metal;
 import com.numbercruncher.rainbow.objects.Cube;
+import com.numbercruncher.rainbow.objects.Cylinder;
 import com.numbercruncher.rainbow.objects.Plane;
 import com.numbercruncher.rainbow.objects.Prism;
 import com.numbercruncher.rainbow.objects.Sphere;
@@ -132,6 +133,7 @@ public class Scene {
 
     private List<SceneObject> objects;
     private Sky sky;
+    private CausticMap causticMap; // optional; null when caustics aren't precomputed
 
     // BVH acceleration (built lazily on first intersect)
     private BVHNode bvh;
@@ -203,8 +205,35 @@ public class Scene {
         return sky;
     }
 
+    public CausticMap getCausticMap() {
+        return causticMap;
+    }
+
+    public Scene setCausticMap(CausticMap map) {
+        this.causticMap = map;
+        return this;
+    }
 
 
+
+
+    /**
+     * Cup-bottom caustic: a metallic cylindrical wall sits on a white
+     * Lambertian floor with the sun shining in at an oblique angle.
+     * Reflections off the inner wall converge into the cardioid/nephroid
+     * "coffee-cup" caustic on the bottom.
+     *
+     * Geometry: cup at origin, radius 1, height 1, base at z=0.
+     * Sun: altitude 30°, azimuth 0 (along +y) — light enters the cup from
+     * one side, producing a heart-shaped bright curve with its cusp toward
+     * the sunlit wall.
+     */
+    public static final Scene CUP_CAUSTIC = new Scene(
+            new SkySunny(Math.toRadians(35), 0.0, 5800.0, 8.0, 0.02, 5.0))
+            .addObject(new Plane(new Vector(0, 0, 1), new Vector(0, 0, 0),
+                    new Lambertian(Color.WHITE)))
+            .addObject(new Cylinder(new Vector(0, 0, 0.001), 1.0, 2.0,
+                    new Metal(0.0, 0.05)));
 
     /**
      * Keep it as an example, don't touch it

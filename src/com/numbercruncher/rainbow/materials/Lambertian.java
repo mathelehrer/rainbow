@@ -72,8 +72,20 @@ public class Lambertian extends Material {
             }
         }
 
+        // 4. Caustic photon map (sun-via-specular contributions deposited by
+        //    a forward photon trace). Treats the stored irradiance as extra
+        //    incoming light: L_out(λ) = ρ(λ)/π · E(x, y, λ).
+        double causticRadiance = 0;
+        com.numbercruncher.rainbow.CausticMap causticMap = scene.getCausticMap();
+        if (causticMap != null) {
+            double E = causticMap.sample(hitRecord.point.x, hitRecord.point.y, lambda);
+            if (E > 0) {
+                causticRadiance = color.spectralReflectance(lambda) * albedo * E / Math.PI;
+            }
+        }
+
         RaySpectral result = new RaySpectral(hitRecord.point, scatterDirection, lambda, reflectance);
-        result.setRadiance(emittedRadiance + directRadiance);
+        result.setRadiance(emittedRadiance + directRadiance + causticRadiance);
         return result;
     }
 

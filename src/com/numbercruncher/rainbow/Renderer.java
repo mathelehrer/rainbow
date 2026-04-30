@@ -75,7 +75,11 @@ public class Renderer {
         double local = scatter.getRadiance();
         // If this material uses NEE (direct sun sampling), exclude the sun
         // from the sky for the bounce ray to avoid double-counting.
-        boolean nextExcludeSun = mat.usesDirectLightSampling();
+        // The flag is *sticky*: once set, it propagates through subsequent
+        // specular bounces too. That kills sun-via-specular paths after a
+        // diffuse hit (caustics) in the camera tracer, leaving them to be
+        // provided by the caustic photon map (Scene.causticMap) when present.
+        boolean nextExcludeSun = excludeSunFromSky || mat.usesDirectLightSampling();
         double reflected = scatter.getThroughput() * rayRadiance(
                 new Ray(record.point, scatter.getDirection()), lambda, depth + 1, nextExcludeSun);
         return local + reflected;

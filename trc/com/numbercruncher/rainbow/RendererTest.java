@@ -75,6 +75,37 @@ class RendererTest {
     }
 
     @Test
+    void renderCupCaustic(){
+        // Camera straight above the cup looking down. The cup is taller than
+        // its radius so the camera frustum stays inside the cup walls — the
+        // outside floor never appears, leaving the cardioid caustic on the
+        // shadowed bottom as the only bright feature. World-up is +y so the
+        // sun (azimuth 0 → +y) appears "up" in the image; the heart-shaped
+        // caustic opens toward the top of the frame.
+        Camera camera = new Camera(16./9, 1.62, 2.5,
+                new Vector(0, 0, 3.0),
+                new Vector(0, 0, 0),
+                new Vector(0, 1, 0));
+
+        // Pre-pass: forward photon trace from the sun through specular
+        // bounces, depositing onto a 2D + spectral grid covering the cup
+        // floor. The renderer then reads the grid as extra incoming
+        // irradiance for the floor's Lambertian — clean caustic, no
+        // sample-starved noise.
+        CausticMap map = new CausticMap(-1.05, 1.05, -1.05, 1.05,
+                CIE1931.LAMBDA_MIN, CIE1931.LAMBDA_MAX,
+                256, 256, 24);
+        CausticTracer.shoot(Scene.CUP_CAUSTIC, map,
+                2_000_000,   // photon count
+                1.2,         // disk radius — covers cup top opening
+                10.0);       // disk distance along sun direction
+        Scene.CUP_CAUSTIC.setCausticMap(map);
+
+        Renderer renderer = new Renderer(Scene.CUP_CAUSTIC, camera, 8);
+        renderer.render("test_image_cup_caustic");
+    }
+
+    @Test
     void renderPrismSunny_two(){
         // Same camera, sunny sky — white sunlight through glass shows dispersion.
         Camera camera = new Camera(16./9, 2, 0.75,
